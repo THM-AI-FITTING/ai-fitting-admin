@@ -1,3 +1,7 @@
+<!-- 
+  상태 표시 배지 컴포넌트
+  작업의 상태(DONE, START, FAILED 등)를 유색 배지와 텍스트로 표시합니다.
+-->
 <template>
   <span :class="['status-badge', status.toLowerCase()]">
     <span class="dot"></span>
@@ -34,20 +38,20 @@ const props = defineProps<{
 
 /* Status Variants */
 .active, .done {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(16, 185, 129, 0.15);
   color: var(--color-success);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .inactive, .failed {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.15);
   color: var(--color-danger);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .start, .pending {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(99, 102, 241, 0.15);
   color: var(--color-primary);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
 }
 </style>

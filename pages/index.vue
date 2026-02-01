@@ -1,3 +1,7 @@
+<!-- 
+  대시보드 메인 페이지
+  전체 작업 통계 현황과 최근 작업/실패 내역을 한눈에 확인할 수 있는 요약 화면입니다.
+-->
 <template>
   <div class="dashboard-page">
     <!-- Stat Cards -->

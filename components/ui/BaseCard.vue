@@ -1,3 +1,8 @@
+<!-- 
+  공통 카드(Card) 컴포넌트
+  콘텐츠를 감싸는 유리 질감(Glassmorphism) 스타일의 컨테이너입니다. 
+  헤더, 바디, 푸터 슬롯을 지원합니다.
+-->
 <template>
   <div class="glass-panel base-card">
     <div v-if="$slots.header || title" class="card-header">
@@ -27,7 +32,7 @@ defineProps<{
 
 .card-header {
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -44,7 +49,7 @@ defineProps<{
 
 .card-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--color-border);
+  background: rgba(0, 0, 0, 0.05);
 }
 </style>

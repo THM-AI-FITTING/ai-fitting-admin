@@ -1,3 +1,7 @@
+<!-- 
+  AI 가상 피팅 작업 상세 페이지
+  작업의 기본 정보와 결과 이미지를 보여주며, 이미지 다운로드 및 상세 리뷰 이동 기능을 제공합니다.
+-->
 <template>
   <div v-if="job" class="job-detail-page">
     <div class="breadcrumb">
@@ -57,9 +61,13 @@ definePageMeta({
   title: '작업 상세 정보'
 });
 
+// 페이지 진입 시 해당 ID의 작업 데이터를 조회합니다.
 const route = useRoute();
 const { data: job } = await useFetch<any>(`/api/jobs/${route.params.id}`);
 
+/**
+ * 작업을 완료한 결과 이미지를 브라우저에서 다운로드합니다.
+ */
 const downloadImage = (url: string) => {
   const link = document.createElement('a');
   link.href = url;

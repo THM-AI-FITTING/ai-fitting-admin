@@ -1,3 +1,8 @@
+/**
+ * 가상 피팅 작업 목록을 조회하는 API 엔드포인트입니다.
+ * 필터 조건(owner, userId, status)에 따라 DynamoDB에서 데이터를 조회하고
+ * 완료된 작업에 대해서는 S3 프리사인드(Presigned) URL을 생성하여 반환합니다.
+ */
 import { ScanCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -10,11 +15,12 @@ export default defineEventHandler(async (event) => {
         let command;
         let input: any = {
             TableName: tableNames.jobs,
-            ScanIndexForward: false, // Descending sort for GSI
+            ScanIndexForward: false, // GSI 조회 시 최신순 정렬
         };
 
+        // 1. 쿼리 파라미터에 따른 조회 방식 결정
         if (query.owner) {
-            // Use Owner GSI
+            // 파트너명(owner)으로 조회 -> 전용 인덱스 사용
             input = {
                 ...input,
                 IndexName: 'owner-sysRegDtm-index',
@@ -24,7 +30,7 @@ export default defineEventHandler(async (event) => {
             };
             command = new QueryCommand(input);
         } else if (query.userId) {
-            // Use UserID GSI
+            // 사용자 ID로 조회 -> 전용 인덱스 사용
             input = {
                 ...input,
                 IndexName: 'userId-sysRegDtm-index',
@@ -33,8 +39,7 @@ export default defineEventHandler(async (event) => {
             };
             command = new QueryCommand(input);
         } else {
-            // Fallback to Scan (Limit 100 for performance safety)
-            // Note: Scan doesn't guarantee order effectively without sorting client side or using an index
+            // 필터가 없는 경우 전체 Scan (보안상 최근 100개 제한)
             input = {
                 TableName: tableNames.jobs,
                 Limit: 100

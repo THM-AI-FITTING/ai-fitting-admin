@@ -1,3 +1,7 @@
+<!-- 
+  AI 가상 피팅 작업 목록 페이지
+  목록형(Table)과 그리드형(Card) 보기 모드를 지원하며, 필터링 및 더보기 기능을 포함합니다.
+-->
 <template>
   <div class="jobs-page">
     <div class="page-controls">
@@ -134,6 +138,7 @@ import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ImageIcon, X, List as ListIcon, LayoutGrid } from 'lucide-vue-next';
 
+// 전역 상태 사용 (사용자 입력 필터, 페이지 크기, 보기 모드 유지)
 const { filters, pageSize, viewMode } = useJobsState();
 
 import BaseCard from '~/components/ui/BaseCard.vue';

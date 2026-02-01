@@ -1,3 +1,7 @@
+<!-- 
+  공통 입력 필드(Input) 컴포넌트
+  라벨, 아이콘, 포커스 효과를 지원하며 v-model로 양방향 바인딩이 가능합니다.
+-->
 <template>
   <div class="base-input-wrapper">
     <label v-if="label" class="input-label">{{ label }}</label>

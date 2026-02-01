@@ -1,3 +1,7 @@
+<!-- 
+  이미지 상세 리뷰 페이지
+  고해상도 이미지를 화면 전체에 꽉 차게 보여주며,Presigned URL의 유효 시간 정보를 제공합니다.
+-->
 <template>
   <div class="image-detail-page">
     <div class="breadcrumb">
@@ -43,9 +47,13 @@ definePageMeta({
   title: '이미지 리뷰'
 });
 
+// 라우트 파라미터에서 ID를 가져와 이미지 전용 Presigned URL을 요청합니다.
 const route = useRoute();
 const { data, pending, error } = await useFetch(`/api/images/${route.params.id}/url`);
 
+/**
+ * 이미지를 원래 크기로 확인하거나 저장하기 위해 새 탭에서 엽니다.
+ */
 const download = () => {
   if (data.value?.url) {
     window.open(data.value.url, '_blank');

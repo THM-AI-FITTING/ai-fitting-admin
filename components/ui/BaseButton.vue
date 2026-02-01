@@ -1,3 +1,8 @@
+<!-- 
+  공통 버튼(Button) 컴포넌트
+  다양한 크기(sm, md, lg)와 스타일(primary, outline, ghost 등)을 지원합니다.
+  로딩 상태 표시 및 아이콘 삽입이 가능합니다.
+-->
 <template>
   <button 
     :class="[
@@ -18,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { Component } from 'vue';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -104,7 +110,7 @@ const iconSize = computed(() => {
   border: 1px solid var(--color-border);
 }
 .btn-secondary:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
   border-color: var(--color-text-muted);
 }
 
@@ -118,12 +124,12 @@ const iconSize = computed(() => {
 }
 
 .btn-danger {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 .btn-danger:not(:disabled):hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.2);
 }
 
 .btn-ghost {
@@ -131,7 +137,7 @@ const iconSize = computed(() => {
   color: var(--color-text-muted);
 }
 .btn-ghost:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
   color: var(--color-text-main);
 }
 

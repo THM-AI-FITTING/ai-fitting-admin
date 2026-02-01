@@ -1,3 +1,8 @@
+<!-- 
+  공통 테이블(Table) 컴포넌트
+  데이터 배열을 받아 정해진 컬럼 형식으로 렌더링합니다.
+  로딩 상태 및 데이터 없음 상태를 처리하며 행 클릭 이벤트를 발생시킵니다.
+-->
 <template>
   <div class="base-table-container">
     <table class="base-table">
@@ -78,7 +83,7 @@ defineEmits(['row-click']);
 th {
   text-align: left;
   padding: 1rem 1.5rem;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(0, 0, 0, 0.05); /* Neutral dark for both themes */
   color: var(--color-text-muted);
   font-weight: 500;
   font-size: 0.875rem;
@@ -88,7 +93,7 @@ th {
 td {
   padding: 1rem 1.5rem;
   color: var(--color-text-main);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--color-border);
   font-size: 0.95rem;
 }
 
@@ -98,17 +103,13 @@ td {
   color: var(--color-text-muted);
 }
 
-th.col-no {
-  text-align: center;
-}
-
 .data-row {
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .data-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .data-row:last-child td {

@@ -9,11 +9,15 @@ import {
   LogOut,
   Menu,
   X,
-  List
+  List,
+  Sun,
+  Moon
 } from 'lucide-vue-next';
+import { useTheme } from '~/composables/useTheme';
 
 const route = useRoute();
 const isSidebarOpen = ref(true);
+const { theme, toggleTheme } = useTheme();
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -66,6 +70,9 @@ const navigation = computed(() => [
       <header class="top-header">
         <h1 class="page-title">{{ route.meta.title || '대시보드' }}</h1>
         <div class="header-actions">
+          <button class="theme-toggle" @click="toggleTheme" title="테마 전환">
+            <component :is="theme === 'dark' ? Sun : Moon" :size="20" />
+          </button>
           <div class="user-profile">
             <div class="avatar">A</div>
             <span class="username">관리자</span>
@@ -184,7 +191,7 @@ const navigation = computed(() => [
 }
 
 .nav-item.active {
-  color: white;
+  color: var(--color-nav-active);
   background: rgba(99, 102, 241, 0.1);
   border-right: 3px solid var(--color-primary);
 }
@@ -212,8 +219,8 @@ const navigation = computed(() => [
 
 .top-header {
   height: 64px;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(8px);
+  background: var(--color-bg-header);
+  backdrop-filter: var(--header-blur);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
@@ -226,6 +233,31 @@ const navigation = computed(() => [
 
 .page-title {
   font-size: 1.25rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.theme-toggle {
+  color: var(--color-text-muted);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+}
+
+.theme-toggle:hover {
+  color: var(--color-text-main);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
 }
 
 .user-profile {
@@ -245,6 +277,11 @@ const navigation = computed(() => [
   justify-content: center;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+.username {
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .page-container {
