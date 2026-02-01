@@ -87,12 +87,19 @@ const form = reactive({
 
 const loading = ref(false);
 
+const formatDateForInput = (val: any) => {
+  if (!val) return '';
+  const date = new Date(val);
+  if (isNaN(date.getTime())) return '';
+  return date.toISOString().split('T')[0];
+};
+
 watch(() => props.item, (newItem) => {
   if (newItem) {
     form.owner = newItem.owner || '';
-    form.status = newItem.status;
-    form.createdAt = new Date(newItem.createdAt).toISOString().split('T')[0];
-    form.expiredAt = newItem.expiredAt ? new Date(newItem.expiredAt).toISOString().split('T')[0] : '';
+    form.status = newItem.status || 'ACTIVE';
+    form.createdAt = formatDateForInput(newItem.createdAt);
+    form.expiredAt = formatDateForInput(newItem.expiredAt);
   }
 }, { immediate: true });
 
