@@ -43,7 +43,7 @@ const isFocused = ref(false);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  width: 100%;
+  min-width: 0;
 }
 
 .input-label {

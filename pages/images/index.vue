@@ -9,11 +9,7 @@
         >
           <div class="image-no">No. {{ index + 1 }}</div>
           <div class="image-preview" @click="goToDetail(img.requestId)">
-            <img v-if="img.url" :src="img.url" alt="Result" class="result-thumb" />
-            <div v-else class="placeholder-img">
-              <ImageIcon :size="32" />
-              <span>{{ img.requestId }}</span>
-            </div>
+            <BaseImage :src="img.url" alt="Result" fit="cover" />
           </div>
           <div class="image-info">
             <span class="owner">{{ img.owner }}</span>
@@ -42,6 +38,7 @@ import { ref, computed } from 'vue';
 import { ImageIcon } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
+import BaseImage from '~/components/ui/BaseImage.vue';
 
 definePageMeta({
   title: '실행 결과 조회'
@@ -102,19 +99,6 @@ const goToDetail = (id: string) => {
   overflow: hidden;
 }
 
-.result-thumb {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.placeholder-img {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--color-text-muted);
-}
 
 .image-info {
   padding: 1rem;

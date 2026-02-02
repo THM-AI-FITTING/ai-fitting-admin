@@ -11,7 +11,7 @@
       <div class="grid-2 mb-4">
         <BaseInput 
           v-model="form.createdAt" 
-          label="생성일" 
+          label="시작일" 
           type="date"
           :icon="Calendar"
           class="bright-icon"
@@ -97,8 +97,8 @@ const createKey = async () => {
       method: 'POST',
       body: {
         owner: form.owner,
-        createdAt: new Date(form.createdAt).getTime(),
-        expiredAt: form.expiredAt ? new Date(form.expiredAt).getTime() : null
+        createdAt: new Date(form.createdAt).toISOString(),
+        expiredAt: form.expiredAt ? new Date(form.expiredAt).toISOString() : null
       }
     });
     if (res && res.apiKey) {

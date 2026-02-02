@@ -90,11 +90,7 @@
           @click="goToDetail(job)"
         >
           <div class="thumb-container">
-            <img v-if="job.url" :src="job.url" :alt="job.requestId" class="thumb-img" />
-            <div v-else class="thumb-placeholder">
-              <ImageIcon :size="48" class="text-muted" />
-              <span>이미지 없음</span>
-            </div>
+            <BaseImage :src="job.url" :alt="job.requestId" fit="cover" />
             <div class="thumb-status">
               <StatusBadge :status="job.status" size="sm" />
             </div>
@@ -124,7 +120,9 @@
         :style="{ top: previewPos.y + 'px', left: previewPos.x + 'px' }"
         @click.stop
       >
-        <img :src="previewUrl" alt="Result Preview" class="preview-img" />
+        <div class="preview-img-wrapper">
+          <BaseImage :src="previewUrl" alt="Result Preview" fit="contain" />
+        </div>
         <BaseButton size="sm" variant="ghost" class="close-preview" @click="previewUrl = null">
           <X :size="16" />
         </BaseButton>
@@ -146,6 +144,7 @@ import BaseButton from '~/components/ui/BaseButton.vue';
 import BaseInput from '~/components/ui/BaseInput.vue';
 import BaseTable from '~/components/ui/BaseTable.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
+import BaseImage from '~/components/ui/BaseImage.vue';
 
 definePageMeta({
   title: 'AI 피팅 작업 목록'
@@ -252,22 +251,6 @@ const goToDetail = (row: any) => {
   position: relative;
 }
 
-.thumb-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumb-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: var(--color-text-muted);
-}
 
 .thumb-status {
   position: absolute;
@@ -363,14 +346,14 @@ const goToDetail = (row: any) => {
   max-height: 95vh;
 }
 
-.preview-img {
+.preview-img-wrapper {
   max-width: 100%;
   max-height: calc(95vh - 0.8rem); /* 0.8rem for padding */
   width: auto;
   height: auto;
-  object-fit: contain;
   border-radius: var(--radius-md);
-  display: block;
+  overflow: hidden;
+  display: flex;
 }
 
 .close-preview {

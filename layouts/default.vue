@@ -17,7 +17,14 @@ import { useTheme } from '~/composables/useTheme';
 
 const route = useRoute();
 const isSidebarOpen = ref(true);
-const { theme, toggleTheme } = useTheme();
+const { theme, toggleTheme, updateBodyClass } = useTheme();
+
+// 서버 사이드와 클라이언트 사이드에서 테마 클래스를 동기화합니다.
+useHead({
+  bodyAttrs: {
+    class: computed(() => theme.value === 'light' ? 'light-mode' : '')
+  }
+});
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -88,42 +95,7 @@ const navigation = computed(() => [
 </template>
 
 <style scoped>
-.app-layout {
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--color-bg-main);
-  color: var(--color-text-main);
-}
-
-/* Sidebar Styles */
-.sidebar {
-  width: 260px;
-  background: var(--color-bg-surface);
-  border-right: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 50;
-}
-
-.sidebar-closed {
-  width: 70px;
-}
-
-.sidebar-header {
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.sidebar-closed .sidebar-header {
-  padding: 0;
-  justify-content: center;
-}
-
+/* Scoped styles for refinement only, core structure is in main.css */
 .logo-area {
   display: flex;
   align-items: center;
@@ -160,40 +132,9 @@ const navigation = computed(() => [
   background: rgba(255, 255, 255, 0.05);
 }
 
-.sidebar-nav {
-  flex: 1;
-  padding: 1.5rem 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  overflow-y: auto;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.5rem;
-  color: var(--color-text-muted);
-  transition: all 0.2s;
-  white-space: nowrap;
-  position: relative;
-}
-
-.sidebar-closed .nav-item {
-  padding: 0.75rem 0;
-  justify-content: center;
-}
-
 .nav-item:hover {
   color: var(--color-text-main);
   background: rgba(255, 255, 255, 0.03);
-}
-
-.nav-item.active {
-  color: var(--color-nav-active);
-  background: rgba(99, 102, 241, 0.1);
-  border-right: 3px solid var(--color-primary);
 }
 
 .nav-item.active svg {
@@ -207,28 +148,6 @@ const navigation = computed(() => [
 
 .logout-btn {
   width: 100%;
-}
-
-/* Main Content Styles */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-}
-
-.top-header {
-  height: 64px;
-  background: var(--color-bg-header);
-  backdrop-filter: var(--header-blur);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 40;
 }
 
 .page-title {
@@ -282,11 +201,5 @@ const navigation = computed(() => [
 .username {
   font-weight: 500;
   font-size: 0.9rem;
-}
-
-.page-container {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
 }
 </style>

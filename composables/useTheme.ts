@@ -1,23 +1,23 @@
-/**
- * 어플리케이션의 테마(다크/라이트 모드)를 관리하는 컴포저블입니다.
- * 사용자의 설정 정보를 localStorage에 저장하고 body 태그의 class를 제어합니다.
- */
-import { onMounted, watch } from 'vue';
-import { useState } from '#app';
+import { watch } from 'vue';
+import { useState, useCookie } from '#app';
 
 export const useTheme = () => {
-    const theme = useState<'dark' | 'light'>('theme', () => 'dark');
+    // 쿠키를 사용하여 서버 사이드에서도 테마 정보를 알 수 있게 합니다.
+    const themeCookie = useCookie<'dark' | 'light'>('theme-preference', {
+        default: () => 'dark',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365 // 1년 유지
+    });
+
+    const theme = useState<'dark' | 'light'>('theme', () => themeCookie.value || 'dark');
 
     /**
      * 테마를 토글(다크 <-> 라이트)하고 설정을 저장합니다.
      */
     const toggleTheme = () => {
         theme.value = theme.value === 'dark' ? 'light' : 'dark';
-        if (typeof window !== 'undefined') {
-            // 브라우저 로컬 스토리지에 테마 유지
-            localStorage.setItem('theme-preference', theme.value);
-            updateBodyClass();
-        }
+        themeCookie.value = theme.value;
+        updateBodyClass();
     };
 
     /**
@@ -33,19 +33,15 @@ export const useTheme = () => {
         }
     };
 
-    /**
-     * 앱 초기 로드 시 저장된 테마 설정을 불러옵니다.
-     */
-    onMounted(() => {
-        const savedTheme = localStorage.getItem('theme-preference') as 'dark' | 'light' | null;
-        if (savedTheme) {
-            theme.value = savedTheme;
-        }
+    // 테마 상태 변경 시 쿠키 동기화
+    watch(theme, (newTheme) => {
+        themeCookie.value = newTheme;
         updateBodyClass();
     });
 
     return {
         theme,
-        toggleTheme
+        toggleTheme,
+        updateBodyClass
     };
 };

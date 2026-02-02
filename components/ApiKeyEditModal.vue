@@ -18,7 +18,7 @@
       <div class="grid-2 mb-4">
         <BaseInput 
           v-model="form.createdAt" 
-          label="생성일" 
+          label="시작일" 
           type="date"
           :icon="Calendar"
           class="bright-icon"
@@ -61,6 +61,7 @@ interface ApiKeyItem {
   owner?: string;
   status: string;
   createdAt: number;
+  sysRegDtm: number;
   expiredAt: number | null;
 }
 
@@ -113,8 +114,9 @@ const updateKey = async () => {
       body: {
         owner: form.owner,
         status: form.status,
-        createdAt: new Date(form.createdAt).getTime(),
-        expiredAt: form.expiredAt ? new Date(form.expiredAt).getTime() : null
+        createdAt: new Date(form.createdAt).toISOString(),
+        sysRegDtm: props.item.sysRegDtm,
+        expiredAt: form.expiredAt ? new Date(form.expiredAt).toISOString() : null
       }
     });
     emit('updated');

@@ -18,10 +18,10 @@
         이미지를 불러올 수 없습니다.
       </div>
       
-      <img 
+      <BaseImage 
         v-else 
         :src="data.url" 
-        class="result-image" 
+        fit="contain" 
         alt="Result" 
       />
       
@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import { Download } from 'lucide-vue-next';
 import BaseButton from '~/components/ui/BaseButton.vue';
+import BaseImage from '~/components/ui/BaseImage.vue';
 
 definePageMeta({
   title: '이미지 리뷰'
@@ -80,11 +81,6 @@ const download = () => {
   overflow: hidden;
 }
 
-.result-image {
-  max-width: 100%;
-  max-height: calc(100% - 80px);
-  object-fit: contain;
-}
 
 .actions-bar {
   position: absolute;

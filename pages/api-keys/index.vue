@@ -50,6 +50,14 @@
         <template #createdAt="{ row }">
           {{ formatDate(row.createdAt) }}
         </template>
+
+        <template #sysRegDtm="{ row }">
+          {{ row.sysRegDtm ? formatDateTime(row.sysRegDtm) : '-' }}
+        </template>
+
+        <template #sysModDtm="{ row }">
+          {{ row.sysModDtm ? formatDateTime(row.sysModDtm) : '-' }}
+        </template>
         
         <template #expiredAt="{ row }">
           {{ row.expiredAt ? formatDate(row.expiredAt) : '무제한' }}
@@ -160,8 +168,10 @@ const columns = [
   { key: 'maskedKey', label: 'API Key' },
   { key: 'owner', label: '파트너' },
   { key: 'status', label: '상태' },
-  { key: 'createdAt', label: '생성일' },
-  { key: 'expiredAt', label: '만료일' },
+  { key: 'createdAt', label: '시작일' },
+  { key: 'sysRegDtm', label: '생성일' },
+  { key: 'sysModDtm', label: '수정일' },
+  { key: 'expiredAt', label: '만료일(종료일)' },
   { key: 'actions', label: '관리', width: '100px' }
 ];
 
@@ -199,6 +209,7 @@ const toggleStatus = async (row: any) => {
       status: newStatus,
       owner: row.owner,
       createdAt: row.createdAt,
+      sysRegDtm: row.sysRegDtm,
       expiredAt: row.expiredAt
     }
   });
@@ -222,7 +233,16 @@ const formatDate = (ts: any) => {
   if (!ts) return '-';
   const date = new Date(ts);
   if (isNaN(date.getTime())) return '-';
+  // ISO string is already yyyy-MM-dd... but we'll use ko-KR for consistent UI
   return date.toLocaleDateString('ko-KR');
+};
+
+const formatDateTime = (ts: any) => {
+  if (!ts) return '-';
+  const date = new Date(ts);
+  if (isNaN(date.getTime())) return '-';
+  // Use locale string to show both date and time clearly
+  return date.toLocaleString('ko-KR');
 };
 </script>
 

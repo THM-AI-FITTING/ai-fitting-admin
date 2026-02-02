@@ -8,41 +8,63 @@
       <BaseButton variant="ghost" size="sm" @click="$router.back()">← 목록으로 돌아가기</BaseButton>
     </div>
 
-    <div class="detail-grid">
-      <!-- Main Info -->
-      <BaseCard title="작업 정보">
-        <div class="info-list">
-          <div class="info-item">
-            <span class="label">요청 ID</span>
-            <span class="value mono">{{ job.requestId }}</span>
+    <!-- Job Header Info -->
+    <BaseCard class="header-card">
+      <div class="header-info-grid">
+        <div class="header-item">
+          <span class="header-label">요청 ID</span>
+          <span class="header-value mono">{{ job.requestId }}</span>
+        </div>
+        <div class="header-item">
+          <span class="header-label">파트너</span>
+          <span class="header-value">{{ job.owner }}</span>
+        </div>
+        <div class="header-item">
+          <span class="header-label">사용자 ID</span>
+          <span class="header-value">{{ job.userId }}</span>
+        </div>
+        <div class="header-item">
+          <span class="header-label">상태</span>
+          <StatusBadge :status="job.status" />
+        </div>
+      </div>
+    </BaseCard>
+
+    <div class="comparison-layout">
+      <!-- Input Section -->
+      <BaseCard title="입력 이미지" class="comparison-card input-section">
+        <div class="input-comparison-grid">
+          <div v-if="job.personUrl" class="comparison-item">
+            <span class="item-label">대상 사람</span>
+            <div class="image-wrapper">
+              <BaseImage :src="job.personUrl" alt="Person" fit="contain" />
+            </div>
           </div>
-          <div class="info-item">
-            <span class="label">상태</span>
-            <StatusBadge :status="job.status" />
-          </div>
-          <div class="info-item">
-            <span class="label">파트너</span>
-            <span class="value">{{ job.owner }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">사용자 ID</span>
-            <span class="value">{{ job.userId }}</span>
+          <div v-if="job.productUrl" class="comparison-item">
+            <span class="item-label">대상 상품</span>
+            <div class="image-wrapper">
+              <BaseImage :src="job.productUrl" alt="Product" fit="contain" />
+            </div>
           </div>
         </div>
       </BaseCard>
 
-      <!-- Result Image -->
-      <BaseCard v-if="job.status === 'DONE' && job.url" title="결과 이미지">
-        <div class="result-image-container">
-          <img :src="job.url" alt="Fitting Result" class="result-image" />
-          <div class="image-actions">
-            <BaseButton variant="primary" size="sm" @click="downloadImage(job.url)">
+      <!-- Flow Arrow (Visible on desktop) -->
+      <div class="flow-arrow" v-if="job.status === 'DONE'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </div>
+
+      <BaseCard v-if="job.status === 'DONE' && job.url" title="가상 피팅 결과" class="comparison-card result-section highlight">
+        <div class="result-display">
+          <div class="image-wrapper main-result">
+            <BaseImage :src="job.url" alt="Result" fit="contain" />
+          </div>
+          <div class="result-actions">
+            <BaseButton variant="primary" @click="downloadImage(job.url)">
               이미지 다운로드
             </BaseButton>
             <NuxtLink :to="`/images/${job.requestId}`">
-              <BaseButton variant="ghost" size="sm">
-                상세보기
-              </BaseButton>
+              <BaseButton variant="ghost">상세 리뷰/수정</BaseButton>
             </NuxtLink>
           </div>
         </div>
@@ -56,6 +78,7 @@ import { useRoute } from 'vue-router';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
+import BaseImage from '~/components/ui/BaseImage.vue';
 
 definePageMeta({
   title: '작업 상세 정보'
@@ -87,104 +110,163 @@ const downloadImage = (url: string) => {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 1.5rem;
+  align-items: start;
 }
 
-.result-image-container {
+.job-detail-page {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-}
-
-.result-image {
-  width: auto;
-  max-width: 100%;
-  max-height: 400px; /* Constrain height for FHD fit */
-  border-radius: var(--radius-lg);
-  display: block;
+  gap: 2rem;
+  max-width: 1400px;
   margin: 0 auto;
-  border: 1px solid var(--color-border);
 }
 
-.image-actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
+/* Header Info (Slimmer) */
+.header-card {
+  padding: 0;
 }
 
-
-.info-list {
+.header-info-grid {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.info-item {
-  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
   justify-content: space-between;
+  padding: 1rem 1.5rem;
+}
+
+.header-item {
+  display: flex;
   align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  gap: 0.75rem;
+  padding: 0.25rem 0;
 }
 
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.label {
+.header-label {
+  font-size: 0.75rem;
   color: var(--color-text-muted);
-  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
-.value {
+.header-value {
   font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .mono {
-  font-family: monospace;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 0.2rem 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  padding: 0.1rem 0.4rem;
   border-radius: 4px;
 }
 
-.text-sm {
-  font-size: 0.85rem;
+/* Comparison Layout (Aligned) */
+.comparison-layout {
+  display: flex;
+  align-items: stretch; /* Cards will have the same height */
+  gap: 1.5rem;
+  width: 100%;
 }
 
-.value-group {
+@media (max-width: 1100px) {
+  .comparison-layout {
+    flex-direction: column;
+  }
+  .flow-arrow {
+    transform: rotate(90deg);
+  }
+}
+
+.comparison-card {
+  flex: 1;
+  height: 100%;
+}
+
+.highlight {
+  border: 2px solid var(--color-primary-light);
+  box-shadow: 0 0 30px rgba(var(--color-primary-rgb), 0.15);
+}
+
+.input-comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 0.5rem;
+}
+
+.comparison-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.item-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.image-wrapper {
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  aspect-ratio: 3/4;
   display: flex;
   align-items: center;
+  justify-content: center;
+  max-height: 380px; /* Reduced to keep it compact */
+  width: 100%;
+}
+
+.image-wrapper:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-primary);
+}
+
+/* Flow Arrow */
+.flow-arrow {
+  color: var(--color-text-muted);
+  opacity: 0.3;
+  display: flex;
+  align-items: center;
+  padding-top: 2rem; /* Align with image centerish */
+}
+
+/* Result Display */
+.result-display {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem;
+}
+
+.main-result {
+  max-width: 400px;
+  margin: 0 auto;
+  border: 4px solid var(--color-bg);
+}
+
+.result-actions {
+  display: flex;
   gap: 1rem;
+  justify-content: center;
 }
 
-.link-btn {
-  color: var(--color-primary);
-  font-size: 0.9rem;
-}
-
-.link-btn:hover {
-  text-decoration: underline;
-}
-
-.error-box {
-  margin-top: 1rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius-md);
+/* Utility */
+.debug-info {
+  font-size: 0.8rem;
+  background: black;
+  color: #0f0;
   padding: 1rem;
-}
-
-.error-label {
-  color: var(--color-danger);
-  font-weight: 600;
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.error-text {
-  margin: 0;
-  color: #fca5a5;
+  border-radius: 8px;
+  overflow: auto;
 }
 </style>
