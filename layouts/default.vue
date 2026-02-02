@@ -33,8 +33,8 @@ const toggleSidebar = () => {
 const navigation = computed(() => [
   { name: '대시보드', href: '/', icon: LayoutDashboard, active: route.path === '/' },
   { name: 'API 키 관리', href: '/api-keys', icon: Key, active: route.path === '/api-keys' },
-  { name: 'AI 가상 피팅 목록', href: '/jobs', icon: List, active: route.path.startsWith('/jobs') },
-  { name: '실행 결과 조회', href: '/images', icon: ImageIcon, active: route.path.startsWith('/images') },
+  { name: 'AI 가상 피팅 목록', href: '/jobs', icon: List, active: route.path.startsWith('/jobs') || route.path.startsWith('/images') },
+  // { name: '실행 결과 조회', href: '/images', icon: ImageIcon, active: route.path.startsWith('/images') }, // 숨김 처리
 ]);
 </script>
 

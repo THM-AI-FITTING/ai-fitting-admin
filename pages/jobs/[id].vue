@@ -27,6 +27,18 @@
           <span class="header-label">상태</span>
           <StatusBadge :status="job.status" />
         </div>
+        <div class="header-item">
+          <span class="header-label">생성일</span>
+          <span class="header-value">{{ new Date(job.sysRegDtm).toLocaleString('ko-KR', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit',
+            hour12: false 
+          }) }}</span>
+        </div>
       </div>
     </BaseCard>
 
@@ -64,7 +76,7 @@
               이미지 다운로드
             </BaseButton>
             <NuxtLink :to="`/images/${job.requestId}`">
-              <BaseButton variant="ghost">상세 리뷰/수정</BaseButton>
+              <BaseButton variant="ghost">상세 리뷰</BaseButton>
             </NuxtLink>
           </div>
         </div>
@@ -213,22 +225,25 @@ const downloadImage = (url: string) => {
 }
 
 .image-wrapper {
-  background: var(--color-bg-alt);
+  background: transparent;
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid var(--color-border);
+  overflow: visible;
+  border: none;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   aspect-ratio: 3/4;
   display: flex;
   align-items: center;
   justify-content: center;
-  max-height: 380px; /* Reduced to keep it compact */
+  max-height: 380px;
   width: 100%;
+}
+
+.image-wrapper :deep(.base-image) {
+  background: transparent;
 }
 
 .image-wrapper:hover {
   transform: translateY(-4px);
-  border-color: var(--color-primary);
 }
 
 /* Flow Arrow */
@@ -251,7 +266,12 @@ const downloadImage = (url: string) => {
 .main-result {
   max-width: 400px;
   margin: 0 auto;
-  border: 4px solid var(--color-bg);
+  background: transparent;
+  border: none;
+}
+
+.main-result :deep(.base-image) {
+  background: transparent;
 }
 
 .result-actions {

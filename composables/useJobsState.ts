@@ -16,7 +16,7 @@ export const useJobsState = () => {
     const pageSize = useState('jobs-pageSize', () => 15);
 
     // 작업 목록 보기 모드 ('list': 리스트형, 'grid': 썸네일형)
-    const viewMode = useState<'list' | 'grid'>('jobs-viewMode', () => 'list');
+    const viewMode = useState<'list' | 'grid'>('jobs-viewMode', () => 'grid');
 
     return {
         filters,

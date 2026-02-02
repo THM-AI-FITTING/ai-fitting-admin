@@ -25,6 +25,14 @@
           class="bright-icon"
         />
       </div>
+
+      <div class="mb-4">
+        <label class="input-label">상태</label>
+        <select v-model="form.status" class="status-select">
+          <option value="ACTIVE">활성 (ACTIVE)</option>
+          <option value="INACTIVE">비활성 (INACTIVE)</option>
+        </select>
+      </div>
     </div>
 
     <div v-else class="success-view">
@@ -83,7 +91,8 @@ const nextMonth = oneMonthLater.toISOString().split('T')[0];
 const form = reactive({
   owner: '',
   createdAt: today,
-  expiredAt: nextMonth
+  expiredAt: nextMonth,
+  status: 'ACTIVE' // 기본값은 활성
 });
 
 const loading = ref(false);
@@ -98,7 +107,8 @@ const createKey = async () => {
       body: {
         owner: form.owner,
         createdAt: new Date(form.createdAt).toISOString(),
-        expiredAt: form.expiredAt ? new Date(form.expiredAt).toISOString() : null
+        expiredAt: form.expiredAt ? new Date(form.expiredAt).toISOString() : null,
+        status: form.status
       }
     });
     if (res && res.apiKey) {
@@ -123,6 +133,7 @@ const close = () => {
     form.owner = '';
     form.createdAt = today;
     form.expiredAt = nextMonth;
+    form.status = 'ACTIVE';
   }, 300);
 };
 </script>
@@ -140,6 +151,31 @@ const close = () => {
 :deep(.bright-icon .input-icon) {
   color: var(--color-text-main) !important;
   opacity: 0.9;
+}
+
+.input-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-main);
+}
+
+.status-select {
+  width: 100%;
+  background: var(--color-bg-main);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-main);
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.status-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .success-view {

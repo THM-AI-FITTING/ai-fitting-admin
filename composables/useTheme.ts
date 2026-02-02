@@ -4,12 +4,12 @@ import { useState, useCookie } from '#app';
 export const useTheme = () => {
     // 쿠키를 사용하여 서버 사이드에서도 테마 정보를 알 수 있게 합니다.
     const themeCookie = useCookie<'dark' | 'light'>('theme-preference', {
-        default: () => 'dark',
+        default: () => 'light',
         path: '/',
         maxAge: 60 * 60 * 24 * 365 // 1년 유지
     });
 
-    const theme = useState<'dark' | 'light'>('theme', () => themeCookie.value || 'dark');
+    const theme = useState<'dark' | 'light'>('theme', () => themeCookie.value || 'light');
 
     /**
      * 테마를 토글(다크 <-> 라이트)하고 설정을 저장합니다.

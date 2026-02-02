@@ -23,6 +23,11 @@
           <option value="FAILED">실패 (FAILED)</option>
         </select>
         
+        <select v-model="sortOrder" class="filter-select">
+          <option value="desc">최신순</option>
+          <option value="asc">등록순</option>
+        </select>
+        
         <BaseButton @click="refresh">검색</BaseButton>
       </div>
 
@@ -30,18 +35,18 @@
         <BaseButton 
           variant="ghost" 
           size="sm" 
-          :class="{ active: viewMode === 'list' }"
-          @click="viewMode = 'list'"
-        >
-          <ListIcon :size="20" />
-        </BaseButton>
-        <BaseButton 
-          variant="ghost" 
-          size="sm" 
           :class="{ active: viewMode === 'grid' }"
           @click="viewMode = 'grid'"
         >
           <LayoutGrid :size="20" />
+        </BaseButton>
+        <BaseButton 
+          variant="ghost" 
+          size="sm" 
+          :class="{ active: viewMode === 'list' }"
+          @click="viewMode = 'list'"
+        >
+          <ListIcon :size="20" />
         </BaseButton>
       </div>
     </div>
@@ -77,7 +82,15 @@
         </template>
         
         <template #sysRegDtm="{ row }">
-          {{ new Date(row.sysRegDtm).toLocaleString('ko-KR') }}
+          {{ new Date(row.sysRegDtm).toLocaleString('ko-KR', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit',
+            hour12: false 
+          }) }}
         </template>
       </BaseTable>
 
@@ -98,7 +111,15 @@
           <div class="thumb-info">
             <div class="requestId text-sm mono truncate">{{ job.requestId }}</div>
             <div class="owner text-xs text-muted">{{ job.owner }}</div>
-            <div class="date text-xs text-muted">{{ new Date(job.sysRegDtm).toLocaleDateString() }}</div>
+            <div class="date text-xs text-muted">{{ new Date(job.sysRegDtm).toLocaleString('ko-KR', { 
+              year: 'numeric', 
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              second: '2-digit',
+              hour12: false 
+            }) }}</div>
           </div>
         </div>
       </div>
@@ -154,13 +175,22 @@ const { data: jobs, pending, refresh: originalRefresh } = await useFetch('/api/j
   query: filters
 });
 
-const visibleJobs = computed(() => (jobs.value || []).slice(0, pageSize.value));
+const visibleJobs = computed(() => {
+  const sorted = [...(jobs.value || [])].sort((a, b) => {
+    const dateA = new Date(a.sysRegDtm).getTime();
+    const dateB = new Date(b.sysRegDtm).getTime();
+    return sortOrder.value === 'desc' ? dateB - dateA : dateA - dateB;
+  });
+  return sorted.slice(0, pageSize.value);
+});
 const hasMore = computed(() => (jobs.value || []).length > pageSize.value);
 
 const refresh = () => {
   pageSize.value = 15;
   originalRefresh();
 };
+
+const sortOrder = ref('desc'); // 최신순이 기본값
 
 const previewUrl = ref<string | null>(null);
 const previewPos = reactive({ x: 0, y: 0 });
@@ -211,15 +241,25 @@ const goToDetail = (row: any) => {
 
 .view-toggles {
   display: flex;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--color-bg-alt);
   padding: 4px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
+  gap: 4px;
 }
 
-.view-toggles .base-button.active {
-  background: var(--color-primary);
-  color: white;
+.view-toggles :deep(.base-btn) {
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.view-toggles :deep(.base-btn.active) {
+  background: var(--color-primary) !important;
+  color: white !important;
+}
+
+.view-toggles :deep(.base-btn.active svg) {
+  color: white !important;
 }
 
 .jobs-grid {
