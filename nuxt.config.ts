@@ -56,16 +56,22 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080'
     }
   },
   vite: {
     server: {
       proxy: {
+        // 1. /api 경로를 그대로 전달
+        '/api': {
+          target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
+          changeOrigin: true
+        },
+        // 2. /ai-fitting-admin/api 로 들어올 경우 /api로 rewrite 하여 전달
         '/ai-fitting-admin/api': {
           target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
           changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/ai-fitting-admin\/api/, '/api')
+          rewrite: (path) => path.replace(/^\/ai-fitting-admin\/api/, '/api')
         }
       }
     }
