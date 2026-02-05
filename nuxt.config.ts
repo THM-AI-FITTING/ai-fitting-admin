@@ -48,9 +48,15 @@ export default defineNuxtConfig({
   build: {
     transpile: ['lucide-vue-next']
   },
-  nitro: {
-    routeRules: {
-      '/api/**': { proxy: 'http://localhost:8080/api/**' }
+  vite: {
+    server: {
+      proxy: {
+        '/ai-fitting-admin/api': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+          rewrite: (path: string) => path.replace(/^\/ai-fitting-admin\/api/, '/api')
+        }
+      }
     }
   }
 })
