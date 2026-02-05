@@ -49,7 +49,7 @@ const props = defineProps<{
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.start, .pending {
+.start, .pending, .processing {
   background: rgba(99, 102, 241, 0.15);
   color: var(--color-primary);
   border: 1px solid rgba(99, 102, 241, 0.3);

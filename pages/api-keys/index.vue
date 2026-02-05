@@ -1,6 +1,6 @@
 <template>
   <div class="api-keys-page">
-    <div class="page-controls">
+    <div class="page-controls animate-fade-in stagger-1">
       <div class="filters">
         <BaseInput 
           v-model="filters.owner" 
@@ -20,7 +20,7 @@
       </BaseButton>
     </div>
 
-    <BaseCard>
+    <BaseCard class="animate-fade-in stagger-2">
       <BaseTable 
         :columns="columns" 
         :data="visibleKeys" 

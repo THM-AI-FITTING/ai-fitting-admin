@@ -3,13 +3,13 @@
   작업의 기본 정보와 결과 이미지를 보여주며, 이미지 다운로드 및 상세 리뷰 이동 기능을 제공합니다.
 -->
 <template>
-  <div v-if="job" class="job-detail-page">
+  <div v-if="job" class="job-detail-page animate-fade-in stagger-1">
     <div class="breadcrumb">
       <BaseButton variant="ghost" size="sm" @click="$router.back()">← 목록으로 돌아가기</BaseButton>
     </div>
 
     <!-- Job Header Info -->
-    <BaseCard class="header-card">
+    <BaseCard class="header-card animate-fade-in stagger-1">
       <div class="header-info-grid">
         <div class="header-item">
           <span class="header-label">요청 ID</span>
@@ -74,11 +74,11 @@
       </BaseCard>
 
       <!-- Flow Arrow (Visible on desktop) -->
-      <div class="flow-arrow" v-if="job.status === 'DONE' || job.status === 'FAILED'" :class="{ 'flow-arrow-failed': job.status === 'FAILED' }">
+      <div class="flow-arrow animate-fade-in stagger-3" v-if="job.status === 'DONE' || job.status === 'FAILED'" :class="{ 'flow-arrow-failed': job.status === 'FAILED' }">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
       </div>
 
-      <BaseCard v-if="job.status === 'DONE' && job.url" title="가상 피팅 결과" class="comparison-card result-section highlight">
+      <BaseCard v-if="job.status === 'DONE' && job.url" title="가상 피팅 결과" class="comparison-card result-section highlight animate-fade-in stagger-4">
         <div class="result-display">
           <div class="image-wrapper main-result">
             <BaseImage :src="job.url" alt="Result" fit="contain" />
@@ -98,7 +98,7 @@
       </BaseCard>
 
       <!-- 실패 이유 표시 섹션 -->
-      <BaseCard v-if="job.status === 'FAILED'" title="작업 실패" class="comparison-card failure-section">
+      <BaseCard v-if="job.status === 'FAILED'" title="작업 실패" class="comparison-card failure-section animate-fade-in stagger-4">
         <div class="failure-display">
           <div class="failure-message-box">
             <!-- 실패 아이콘 -->
@@ -227,6 +227,8 @@ const downloadImage = async (url: string) => {
   margin: 0 auto;
 }
 
+/* 글로벌 애니메이션 유틸리티 사용 ( main.css 참고 ) */
+
 /* Header Info (Slimmer) */
 .header-card {
   padding: 0;
@@ -275,7 +277,7 @@ const downloadImage = async (url: string) => {
   align-items: stretch;
   gap: 1.5rem;
   width: 100%;
-  min-height: 850px; /* 고정 높이 대신 최소 높이로 변경하여 내용물 잘림 방지 */
+  min-height: 700px; /* 고정 높이 대신 최소 높이로 변경하여 내용물 잘림 방지 */
 }
 
 @media (max-width: 1100px) {
@@ -300,7 +302,6 @@ const downloadImage = async (url: string) => {
 
 .highlight {
   border: 2px solid var(--color-primary-light);
-  box-shadow: 0 0 30px rgba(var(--color-primary-rgb), 0.15);
 }
 
 .input-comparison-grid {

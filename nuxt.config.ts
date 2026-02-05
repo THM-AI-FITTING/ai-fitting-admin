@@ -43,73 +43,12 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: [],
   build: {
-    transpile: [
-      'lucide-vue-next',
-      '@aws-sdk/client-dynamodb',
-      '@aws-sdk/lib-dynamodb',
-      '@aws-sdk/client-s3',
-      '@aws-sdk/s3-request-presigner',
-      '@aws-sdk/util-dynamodb',
-      '@aws-sdk/util-endpoints',
-      '@aws-sdk/endpoint-cache',
-      '@smithy/middleware-serde',
-      '@smithy/protocol-http',
-      '@smithy/types',
-      '@smithy/util-base64',
-      '@smithy/util-body-length-browser',
-      '@smithy/util-middleware',
-      '@smithy/util-stream',
-      '@smithy/util-utf8',
-      '@smithy/uuid',
-      '@smithy/smithy-client',
-      '@smithy/core',
-      '@smithy/node-config-provider',
-      '@smithy/util-endpoints',
-      'mnemonist',
-      'obliterator',
-      'lru-cache'
-    ]
+    transpile: ['lucide-vue-next']
   },
   nitro: {
     routeRules: {
       '/api/**': { proxy: 'http://localhost:8080/api/**' }
-    },
-    externals: {
-      inline: [
-        '@aws-sdk/client-dynamodb',
-        '@aws-sdk/lib-dynamodb',
-        '@aws-sdk/client-s3',
-        '@aws-sdk/s3-request-presigner',
-        '@aws-sdk/util-dynamodb',
-        '@aws-sdk/util-endpoints',
-        '@aws-sdk/endpoint-cache',
-        '@smithy/middleware-serde',
-        '@smithy/protocol-http',
-        '@smithy/types',
-        '@smithy/util-base64',
-        '@smithy/util-body-length-browser',
-        '@smithy/util-middleware',
-        '@smithy/util-stream',
-        '@smithy/util-utf8',
-        '@smithy/uuid',
-        '@smithy/smithy-client',
-        '@smithy/core',
-        '@smithy/node-config-provider',
-        '@smithy/util-endpoints',
-        'mnemonist',
-        'obliterator',
-        'lru-cache'
-      ]
     }
-  },
-  runtimeConfig: {
-    awsRegion: '',
-    awsAccessKeyId: '',
-    awsSecretAccessKey: '',
-    cacheTtlSec: '60',
-    sqsUrl: '',
-    s3Bucket: '',
-    aiFittingJobTable: '',
-    aiFittingApiKeyTable: ''
   }
 })
+

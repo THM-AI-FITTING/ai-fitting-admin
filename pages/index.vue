@@ -6,7 +6,7 @@
   <div class="dashboard-page">
     <!-- Stat Cards -->
     <div class="stats-grid">
-      <BaseCard class="stat-card">
+      <BaseCard class="stat-card animate-fade-in stagger-1">
         <template #header>
           <div class="stat-header">
             <span class="stat-title">전체 작업 수</span>
@@ -22,7 +22,7 @@
         </div>
       </BaseCard>
 
-      <BaseCard class="stat-card">
+      <BaseCard class="stat-card animate-fade-in stagger-2">
         <template #header>
           <div class="stat-header">
             <span class="stat-title">진행 중</span>
@@ -35,7 +35,7 @@
         <div class="stat-desc">현재 처리 중</div>
       </BaseCard>
 
-      <BaseCard class="stat-card">
+      <BaseCard class="stat-card animate-fade-in stagger-3">
         <template #header>
           <div class="stat-header">
             <span class="stat-title">완료됨</span>
@@ -48,7 +48,7 @@
         <div class="stat-desc">성공적으로 완료</div>
       </BaseCard>
 
-      <BaseCard class="stat-card">
+      <BaseCard class="stat-card animate-fade-in stagger-4">
         <template #header>
           <div class="stat-header">
             <span class="stat-title">실패</span>
@@ -66,7 +66,7 @@
 
     <div class="content-grid">
       <!-- Recent Jobs -->
-      <div class="section-main">
+      <div class="section-main animate-fade-in stagger-4">
         <BaseCard title="최근 작업">
           <template #header>
             <BaseButton size="sm" variant="ghost" @click="refresh">
@@ -99,7 +99,7 @@
       </div>
 
       <!-- Recent Failed Jobs -->
-      <div class="section-side">
+      <div class="section-side animate-fade-in stagger-5">
         <BaseCard title="최근 실패 목록">
           <div class="failed-list">
             <div 
