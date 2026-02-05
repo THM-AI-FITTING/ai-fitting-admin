@@ -47,21 +47,27 @@
       <BaseCard title="입력 이미지" class="comparison-card input-section">
         <div class="input-comparison-grid">
           <div v-if="job.personUrl" class="comparison-item">
-            <span class="item-label">대상 사람</span>
             <div class="image-wrapper">
               <BaseImage :src="job.personUrl" alt="Person" />
               <button class="zoom-btn" @click="openZoom(job.personUrl, '대상 사람')" title="이미지 확대">
                 <Maximize2 :size="16" />
               </button>
             </div>
+            <div class="item-label">
+              <span class="label-dot"></span>
+              대상 사람
+            </div>
           </div>
           <div v-if="job.productUrl" class="comparison-item">
-            <span class="item-label">대상 상품</span>
             <div class="image-wrapper">
               <BaseImage :src="job.productUrl" alt="Product" />
               <button class="zoom-btn" @click="openZoom(job.productUrl, '대상 상품')" title="이미지 확대">
                 <Maximize2 :size="16" />
               </button>
+            </div>
+            <div class="item-label">
+              <span class="label-dot secondary"></span>
+              대상 상품
             </div>
           </div>
         </div>
@@ -177,10 +183,25 @@ const closeZoom = () => {
 };
 
 /**
- * 작업을 완료한 결과 이미지를 새 창에서 엽니다.
+ * 작업을 완료한 결과 이미지를 브라우저로 다운로드합니다.
  */
-const downloadImage = (url: string) => {
-  window.open(url, '_blank');
+const downloadImage = async (url: string) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `fitting-result-${route.params.id}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error('Download failed:', error);
+    // CORS 문제 등으로 실패할 경우 기존처럼 새 창에서 열기 시도
+    window.open(url, '_blank');
+  }
 };
 </script>
 
@@ -254,7 +275,7 @@ const downloadImage = (url: string) => {
   align-items: stretch;
   gap: 1.5rem;
   width: 100%;
-  height: 800px; /* 고정 높이 */
+  min-height: 850px; /* 고정 높이 대신 최소 높이로 변경하여 내용물 잘림 방지 */
 }
 
 @media (max-width: 1100px) {
@@ -298,42 +319,76 @@ const downloadImage = (url: string) => {
 }
 
 .item-label {
-  font-size: 0.9rem;
+  font-size: 1rem; /* 텍스트 크기 확대 */
   font-weight: 500;
+  color: var(--color-text-main);
+  background: transparent; /* 배경색 제거 */
+  padding: 0.5rem 1.25rem;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  align-self: center;
+  margin-top: 1.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.08); /* 은은한 테두리 */
+  transition: all 0.3s ease;
+  letter-spacing: -0.02em;
+}
+
+.label-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary);
+}
+
+.label-dot.secondary {
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+/* Flow Arrow - 중앙 정렬 */
+.flow-arrow {
   color: var(--color-text-muted);
-  text-align: center;
-  flex-shrink: 0;
+  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
 }
 
 .image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 140%;
   background: transparent;
-  overflow: visible;
   border: none;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: flex-start; /* 상단 정렬 */
-  justify-content: center;
-  height: 550px; /* 이미지 높이 고정 */
   flex-shrink: 0;
+  overflow: visible;
 }
 
 .image-wrapper :deep(.base-image) {
-  height: 550px; /* 고정 영역 높이 */
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
   background: transparent;
   display: flex;
-  align-items: flex-start;
+  align-items: flex-start; /* 상단 정렬 */
   justify-content: center;
-  overflow: visible;
 }
 
 .image-wrapper :deep(.actual-image) {
-  max-height: 100%; /* 고정 높이 내에서 최대 높이 */
+  max-height: 100%;
   max-width: 100%;
-  width: auto; /* 이미지 전체를 보여주기 위해 너비 자동 */
-  height: auto; /* 이미지 전체를 보여주기 위해 높이 자동 */
-  object-fit: contain; /* 잘림 방지 */
-  border-radius: 12px; /* 이미지 외곽선에 라운드 적용 */
+  width: auto;
+  height: auto;
+  object-fit: contain; /* 비율 유지하며 전체 노출 */
+  border-radius: 12px;
   display: block;
 }
 
@@ -462,30 +517,60 @@ const downloadImage = (url: string) => {
 }
 
 
-/* Result Display */
+/* Result Content Display (Centered) */
 .result-display {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem; /* 간격 축소 */
   padding: 0.5rem;
+  flex: 1;
+  justify-content: center; /* 수직 중앙 정렬 */
+  align-items: center;
 }
 
 .main-result {
   max-width: 400px;
+  width: 100%;
   margin: 0 auto;
   background: transparent;
   border: none;
+  padding-top: 0; /* 결과 이미지는 고정 비율 박스 제거 */
+  height: auto;
+  display: flex;
+  justify-content: center;
 }
 
 .main-result :deep(.base-image) {
+  position: relative; /* absolute 제거하여 높이 자동 조절 */
+  width: 100%;
+  height: auto;
   background: transparent;
+}
+
+.main-result :deep(.actual-image) {
+  width: 100%;
+  height: auto;
+  max-height: 550px; /* 너무 커지지 않도록 제한 */
+  object-fit: contain;
+  border-radius: 12px; /* 결과 이미지도 라운드 처리 */
 }
 
 .result-actions {
   display: flex;
   gap: 1rem;
   justify-content: center;
+  margin-top: 0; /* 이미지 바로 밑으로 밀착 */
+  padding-top: 0.5rem;
 }
+
+/* 결과 섹션 카드 본체 높이 채우기 */
+.result-section :deep(.card-body) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 
 /* Utility */
 .debug-info {
