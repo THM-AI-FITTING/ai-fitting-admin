@@ -138,7 +138,9 @@ const selectedItem = ref<any>(null);
 const page = ref(1);
 const limit = 15;
 
+const config = useRuntimeConfig();
 const { data: rawKeys, pending, refresh } = await useFetch('/api/keys', {
+  baseURL: config.public.apiBase,
   query: { 
     q: searchQuery,
     page,
@@ -203,7 +205,7 @@ const toggleStatus = async (row: any) => {
   const actionName = newStatus === 'ACTIVE' ? '활성화' : '비활성화';
   if (!confirm(`정말로 상태를 ${actionName} 하시겠습니까?`)) return;
 
-  await $fetch(`/api/keys/${row.apiKey}`, {
+  await $fetch(`${config.public.apiBase}/api/keys/${row.apiKey}`, {
     method: 'PUT',
     body: { 
       status: newStatus,
@@ -219,7 +221,7 @@ const toggleStatus = async (row: any) => {
 const deleteKey = async (apiKey: string) => {
   if (!confirm('정말로 이 API Key를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
   
-  await $fetch(`/api/keys/${apiKey}`, {
+  await $fetch(`${config.public.apiBase}/api/keys/${apiKey}`, {
     method: 'DELETE'
   });
   refresh();
