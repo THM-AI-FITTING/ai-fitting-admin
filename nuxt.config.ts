@@ -11,7 +11,7 @@ export default defineNuxtConfig({
         // rel="icon" 설정을 통해 탭 아이콘 지정
         // baseURL이 적용되므로 '/favicon.ico'로 작성해도 실제로는 '/ai-fitting-admin/favicon.ico'를 참조합니다.
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
-      ]
+      ],
       style: [
         {
           innerHTML: `
