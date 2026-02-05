@@ -54,8 +54,8 @@
               </button>
             </div>
             <div class="item-label">
-              <span class="label-dot"></span>
-              대상 사람
+              <User :size="16" class="label-icon" />
+              사람
             </div>
           </div>
           <div v-if="job.productUrl" class="comparison-item">
@@ -66,8 +66,8 @@
               </button>
             </div>
             <div class="item-label">
-              <span class="label-dot secondary"></span>
-              대상 상품
+              <Shirt :size="16" class="label-icon secondary" />
+              상품
             </div>
           </div>
         </div>
@@ -78,7 +78,13 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
       </div>
 
-      <BaseCard v-if="job.status === 'DONE' && job.url" title="가상 피팅 결과" class="comparison-card result-section highlight animate-fade-in stagger-4">
+      <BaseCard v-if="job.status === 'DONE' && job.url" class="comparison-card result-section premium animate-fade-in stagger-4">
+        <template #header>
+          <div class="fancy-title">
+            <Sparkles :size="20" class="sparkle-icon" />
+            가상 피팅 결과
+          </div>
+        </template>
         <div class="result-display">
           <div class="image-wrapper main-result">
             <BaseImage :src="job.url" alt="Result" fit="contain" />
@@ -151,7 +157,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { Maximize2, X } from 'lucide-vue-next';
+import { Maximize2, X, User, Shirt, Sparkles } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
@@ -320,34 +326,28 @@ const downloadImage = async (url: string) => {
 }
 
 .item-label {
-  font-size: 1rem; /* 텍스트 크기 확대 */
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--color-text-main);
-  background: transparent; /* 배경색 제거 */
-  padding: 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.5rem 1rem;
   border-radius: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   align-self: center;
-  margin-top: 1.25rem;
-  border: 1px solid rgba(0, 0, 0, 0.08); /* 은은한 테두리 */
+  margin-top: 1rem;
+  border: 1px solid var(--color-border);
   transition: all 0.3s ease;
-  letter-spacing: -0.02em;
 }
 
-.label-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--color-primary);
-  box-shadow: 0 0 8px var(--color-primary);
+.label-icon {
+  color: var(--color-primary);
 }
 
-.label-dot.secondary {
-  background-color: #10b981;
-  box-shadow: 0 0 8px #10b981;
+.label-icon.secondary {
+  color: #10b981;
 }
 
 /* Flow Arrow - 중앙 정렬 */
@@ -530,7 +530,6 @@ const downloadImage = async (url: string) => {
 }
 
 .main-result {
-  max-width: 400px;
   width: 100%;
   margin: 0 auto;
   background: transparent;
@@ -546,14 +545,25 @@ const downloadImage = async (url: string) => {
   width: 100%;
   height: auto;
   background: transparent;
+  overflow: visible; /* 확대 시 잘림 방지 */
 }
 
 .main-result :deep(.actual-image) {
-  width: 100%;
+  width: auto;
   height: auto;
-  max-height: 550px; /* 너무 커지지 않도록 제한 */
+  max-width: 100%;
+  max-height: 550px;
   object-fit: contain;
-  border-radius: 12px; /* 결과 이미지도 라운드 처리 */
+  border-radius: 12px;
+}
+
+.main-result {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.main-result:hover {
+  transform: scale(1.02);
 }
 
 .result-actions {
@@ -700,5 +710,44 @@ const downloadImage = async (url: string) => {
 
 .failure-hint svg {
   opacity: 0.6;
+}
+/* Fancy Result Styling */
+.premium {
+  border: 2px solid transparent;
+  background-image: linear-gradient(var(--color-bg-surface), var(--color-bg-surface)), 
+                    linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  position: relative;
+  overflow: visible;
+}
+
+.fancy-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 800;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.01em;
+}
+
+.sparkle-icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.6));
+}
+
+.emoji-prefix, .emoji-suffix {
+  font-size: 1.2rem;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+  -webkit-text-fill-color: initial;
+}
+
+.result-section :deep(.card-header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 </style>
