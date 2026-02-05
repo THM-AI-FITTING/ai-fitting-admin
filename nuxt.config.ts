@@ -54,11 +54,16 @@ export default defineNuxtConfig({
   build: {
     transpile: ['lucide-vue-next']
   },
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api'
+    }
+  },
   vite: {
     server: {
       proxy: {
         '/ai-fitting-admin/api': {
-          target: 'http://localhost:8080',
+          target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
           changeOrigin: true,
           rewrite: (path: string) => path.replace(/^\/ai-fitting-admin\/api/, '/api')
         }
