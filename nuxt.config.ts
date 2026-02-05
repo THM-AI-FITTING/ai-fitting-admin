@@ -6,6 +6,12 @@ export default defineNuxtConfig({
     baseURL: '/ai-fitting-admin/', // 반드시 레포지토리 이름과 일치해야 함
     buildAssetsDir: 'assets',     // '_nuxt' 대신 'assets' 사용 (GitHub Pages의 지킬 무시 방지)
     head: {
+      title: 'AI Fitting Admin',
+      link: [
+        // rel="icon" 설정을 통해 탭 아이콘 지정
+        // baseURL이 적용되므로 '/favicon.ico'로 작성해도 실제로는 '/ai-fitting-admin/favicon.ico'를 참조합니다.
+        { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }
+      ],
       style: [
         {
           innerHTML: `
