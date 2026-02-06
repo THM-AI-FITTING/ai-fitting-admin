@@ -56,7 +56,8 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080'
+      // GitHub Pages 배포 시 환경 변수가 없을 경우를 대비해 EC2 IP를 기본값으로 설정
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://13.125.210.187:8080'
     }
   },
   vite: {
