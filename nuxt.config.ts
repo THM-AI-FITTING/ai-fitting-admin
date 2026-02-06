@@ -8,20 +8,24 @@ export default defineNuxtConfig({
     head: {
       title: 'AI Fitting Admin',
       meta: [
-        // 보안 강화를 위해 CSP 정책을 헤더 최상단에 배치
-        { 'http-equiv': 'Content-Security-Policy', content: 'upgrade-insecure-requests' },
+        // tagPriority를 'high'로 설정하여 모든 어셋 로드 전에 CSP가 적용되도록 보장 (Mixed Content 방지)
+        {
+          'http-equiv': 'Content-Security-Policy',
+          content: 'upgrade-insecure-requests',
+          tagPriority: 'high'
+        },
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
       ],
       script: [
         {
-          // 리소스 로드 전 HTTPS 전환을 위해 최상단에서 실행
-          innerHTML: `if(window.location.protocol==='http:'&&window.location.hostname!=='localhost')window.location.href=window.location.href.replace('http:','https:');`,
-          type: 'text/javascript'
+          // 최상단에서 즉시 실행되도록 tagPriority 설정
+          innerHTML: `if(window.location.protocol==='http:'&&window.location.hostname!=='localhost')window.location.replace('https:'+window.location.href.substring(5));`,
+          type: 'text/javascript',
+          tagPriority: 'high'
         }
       ],
       link: [
-        // rel="icon" 설정을 통해 탭 아이콘 지정
         { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }
       ]
     }
@@ -45,12 +49,10 @@ export default defineNuxtConfig({
   vite: {
     server: {
       proxy: {
-        // 1. /api 경로를 그대로 전달
         '/api': {
           target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
           changeOrigin: true
         },
-        // 2. /ai-fitting-admin/api 로 들어올 경우 /api로 rewrite 하여 전달
         '/ai-fitting-admin/api': {
           target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
           changeOrigin: true,
