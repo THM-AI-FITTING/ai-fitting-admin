@@ -45,9 +45,7 @@ definePageMeta({
 });
 
 const config = useRuntimeConfig();
-const { data: images } = await useFetch('/api/images', {
-  baseURL: config.public.apiBase
-});
+const { data: images } = await useFetch(`${config.public.apiBase}/api/images`);
 
 const pageSize = ref(15);
 const visibleImages = computed(() => (images.value || []).slice(0, pageSize.value));

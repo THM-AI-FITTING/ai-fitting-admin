@@ -146,7 +146,9 @@ definePageMeta({
   title: '대시보드'
 });
 
-const { data: stats, pending, refresh } = await useFetch('/api/stats');
+const config = useRuntimeConfig();
+console.log('Using API Base:', config.public.apiBase); // 배포된 페이지에서 이 값이 어떻게 찍히는지 확인용
+const { data: stats, pending, refresh } = await useFetch(`${config.public.apiBase}/api/stats`);
 
 const jobColumns = [
   { key: 'requestId', label: '요청 ID' },

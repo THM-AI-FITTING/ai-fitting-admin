@@ -169,9 +169,7 @@ definePageMeta({
 
 // 페이지 진입 시 해당 ID의 작업 데이터를 조회합니다.
 const config = useRuntimeConfig();
-const { data: job } = await useFetch<any>(`/api/jobs/${route.params.id}`, {
-  baseURL: config.public.apiBase
-});
+const { data: job } = await useFetch<any>(`${config.public.apiBase}/api/jobs/${route.params.id}`);
 
 // 이미지 확대 상태 관리
 const isZoomOpen = ref(false);

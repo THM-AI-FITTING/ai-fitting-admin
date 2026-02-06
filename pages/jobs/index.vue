@@ -171,7 +171,8 @@ definePageMeta({
   title: 'AI 피팅 작업 목록'
 });
 
-const { data: jobs, pending, refresh: originalRefresh } = await useFetch('/api/jobs', {
+const config = useRuntimeConfig();
+const { data: jobs, pending, refresh: originalRefresh } = await useFetch(`${config.public.apiBase}/api/jobs`, {
   query: filters
 });
 
