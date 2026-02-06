@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { useRoute } from 'vue-router';
 import { Download } from 'lucide-vue-next';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import BaseImage from '~/components/ui/BaseImage.vue';
@@ -49,6 +50,7 @@ definePageMeta({
 });
 
 // 라우트 파라미터에서 ID를 가져와 이미지 전용 Presigned URL을 요청합니다.
+const route = useRoute();
 const config = useRuntimeConfig();
 const { data, pending, error } = await useFetch(`/api/images/${route.params.id}/url`, {
   baseURL: config.public.apiBase
