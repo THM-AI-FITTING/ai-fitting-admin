@@ -8,52 +8,21 @@ export default defineNuxtConfig({
     head: {
       title: 'AI Fitting Admin',
       meta: [
-        { 'http-equiv': 'Content-Security-Policy', content: 'upgrade-insecure-requests' }
-      ],
-      link: [
-        // rel="icon" 설정을 통해 탭 아이콘 지정
-        // baseURL이 적용되므로 '/favicon.ico'로 작성해도 실제로는 '/ai-fitting-admin/favicon.ico'를 참조합니다.
-        { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }
+        // 보안 강화를 위해 CSP 정책을 헤더 최상단에 배치
+        { 'http-equiv': 'Content-Security-Policy', content: 'upgrade-insecure-requests' },
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' }
       ],
       script: [
         {
-          innerHTML: `
-            if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
-              window.location.href = window.location.href.replace('http:', 'https:');
-            }
-          `.replace(/\s+/g, ' '),
+          // 리소스 로드 전 HTTPS 전환을 위해 최상단에서 실행
+          innerHTML: `if(window.location.protocol==='http:'&&window.location.hostname!=='localhost')window.location.href=window.location.href.replace('http:','https:');`,
           type: 'text/javascript'
         }
       ],
-      style: [
-        {
-          innerHTML: `
-            .app-layout {
-              display: flex;
-              min-height: 100vh;
-            }
-            .sidebar {
-              width: 260px;
-              flex-shrink: 0;
-              transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .sidebar-closed {
-              width: 70px;
-            }
-            .main-content {
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-              min-width: 0;
-            }
-            .top-header {
-              height: 64px;
-              position: sticky;
-              top: 0;
-              z-index: 40;
-            }
-          `,
-        }
+      link: [
+        // rel="icon" 설정을 통해 탭 아이콘 지정
+        { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }
       ]
     }
   },
@@ -91,4 +60,3 @@ export default defineNuxtConfig({
     }
   }
 })
-
