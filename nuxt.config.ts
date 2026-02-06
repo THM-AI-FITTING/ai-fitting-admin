@@ -7,10 +7,23 @@ export default defineNuxtConfig({
     buildAssetsDir: 'assets',     // '_nuxt' 대신 'assets' 사용 (GitHub Pages의 지킬 무시 방지)
     head: {
       title: 'AI Fitting Admin',
+      meta: [
+        { 'http-equiv': 'Content-Security-Policy', content: 'upgrade-insecure-requests' }
+      ],
       link: [
         // rel="icon" 설정을 통해 탭 아이콘 지정
         // baseURL이 적용되므로 '/favicon.ico'로 작성해도 실제로는 '/ai-fitting-admin/favicon.ico'를 참조합니다.
         { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }
+      ],
+      script: [
+        {
+          innerHTML: `
+            if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+              window.location.href = window.location.href.replace('http:', 'https:');
+            }
+          `.replace(/\s+/g, ' '),
+          type: 'text/javascript'
+        }
       ],
       style: [
         {
