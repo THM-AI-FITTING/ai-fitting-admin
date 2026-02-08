@@ -48,10 +48,7 @@
         <div class="input-comparison-grid">
           <div v-if="job.personUrl" class="comparison-item">
             <div class="image-wrapper">
-              <BaseImage :src="job.personUrl" alt="Person" />
-              <button class="zoom-btn" @click="openZoom(job.personUrl, '대상 사람')" title="이미지 확대">
-                <Maximize2 :size="16" />
-              </button>
+              <BaseImage :src="job.personUrl" alt="Person" show-zoom @zoom="openZoom(job.personUrl, '대상 사람')" />
             </div>
             <div class="item-label">
               <User :size="16" class="label-icon" />
@@ -60,10 +57,7 @@
           </div>
           <div v-if="job.productUrl" class="comparison-item">
             <div class="image-wrapper">
-              <BaseImage :src="job.productUrl" alt="Product" />
-              <button class="zoom-btn" @click="openZoom(job.productUrl, '대상 상품')" title="이미지 확대">
-                <Maximize2 :size="16" />
-              </button>
+              <BaseImage :src="job.productUrl" alt="Product" show-zoom @zoom="openZoom(job.productUrl, '대상 상품')" />
             </div>
             <div class="item-label">
               <Shirt :size="16" class="label-icon secondary" />
@@ -87,10 +81,7 @@
         </template>
         <div class="result-display">
           <div class="image-wrapper main-result">
-            <BaseImage :src="job.url" alt="Result" fit="contain" />
-            <button class="zoom-btn" @click="openZoom(job.url, '가상 피팅 결과')" title="이미지 확대">
-              <Maximize2 :size="18" />
-            </button>
+            <BaseImage :src="job.url" alt="Result" fit="contain" show-zoom :zoom-icon-size="20" @zoom="openZoom(job.url, '가상 피팅 결과')" />
           </div>
           <div class="result-actions">
             <BaseButton variant="primary" @click="downloadImage(job.url)">
@@ -145,8 +136,13 @@
               <X :size="24" />
             </button>
           </div>
-          <div class="zoom-content" @click.stop>
-            <img :src="activeZoomImage" :alt="zoomTitle" class="zoomed-image" />
+          <div class="zoom-content">
+            <img 
+              :src="activeZoomImage" 
+              :alt="zoomTitle" 
+              :class="['zoomed-image', { 'is-expanded': isExpanded }]" 
+              @click="toggleExpand" 
+            />
           </div>
         </div>
       </Transition>
@@ -157,7 +153,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { Maximize2, X, User, Shirt, Sparkles } from 'lucide-vue-next';
+import { Search, X, User, Shirt, Sparkles } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
@@ -174,6 +170,7 @@ const { data: job } = await useFetch<any>(`${config.public.apiBase}/api/jobs/${r
 
 // 이미지 확대 상태 관리
 const isZoomOpen = ref(false);
+const isExpanded = ref(false); // 상세 확대(Toggle Zoom) 상태
 const activeZoomImage = ref('');
 const zoomTitle = ref('');
 
@@ -181,12 +178,19 @@ const openZoom = (url: string, title: string) => {
   activeZoomImage.value = url;
   zoomTitle.value = title;
   isZoomOpen.value = true;
+  isExpanded.value = false; // 초기화
   document.body.style.overflow = 'hidden';
 };
 
 const closeZoom = () => {
   isZoomOpen.value = false;
+  isExpanded.value = false;
   document.body.style.overflow = '';
+};
+
+const toggleExpand = (e: MouseEvent) => {
+  e.stopPropagation();
+  isExpanded.value = !isExpanded.value;
 };
 
 /**
@@ -403,35 +407,6 @@ const downloadImage = async (url: string) => {
   transform: scale(1);
 }
 
-/* 확대 버튼 */
-.zoom-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(var(--color-bg-base-rgb), 0.6);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--color-text-main);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transform: scale(0.9);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 10;
-}
-
-.zoom-btn:hover {
-  background: var(--color-primary);
-  color: white;
-  transform: scale(1.1) !important;
-}
-
 /* 확대 오버레이 */
 .zoom-overlay {
   position: fixed;
@@ -494,12 +469,19 @@ const downloadImage = async (url: string) => {
 }
 
 .zoomed-image {
-  max-width: 100%;
-  max-height: 100%;
+  max-width: 90%;
+  max-height: 90%;
   object-fit: contain;
   box-shadow: 0 0 50px rgba(0,0,0,0.5);
-  border-radius: 8px;
-  cursor: default;
+  border-radius: 12px;
+  cursor: zoom-in;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.zoomed-image.is-expanded {
+  transform: scale(1.6);
+  cursor: zoom-out;
 }
 
 /* Zoom Transition */

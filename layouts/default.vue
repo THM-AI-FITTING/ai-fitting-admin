@@ -10,8 +10,10 @@ import {
   Menu,
   X,
   List,
+  Search,
   Sun,
-  Moon
+  Moon,
+  Sparkles
 } from 'lucide-vue-next';
 import { useTheme } from '~/composables/useTheme';
 
@@ -44,8 +46,10 @@ const navigation = computed(() => [
     <aside :class="['sidebar', { 'sidebar-closed': !isSidebarOpen }]">
       <div class="sidebar-header">
         <div class="logo-area" v-if="isSidebarOpen">
-          <div class="logo-icon">AI</div>
-          <span class="logo-text">Fitting Admin</span>
+          <div class="logo-icon">
+            <Sparkles :size="16" />
+          </div>
+          <span class="logo-text"><span class="gradient-text">AI Fitting</span> Admin</span>
         </div>
         <button class="toggle-btn" @click="toggleSidebar">
           <component :is="isSidebarOpen ? X : Menu" :size="20" />
@@ -103,22 +107,23 @@ const navigation = computed(() => [
 }
 
 .logo-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   background: var(--gradient-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
   color: white;
-  font-size: 0.8rem;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
 }
 
 .logo-text {
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
   white-space: nowrap;
+  color: var(--color-text-main);
 }
 
 .toggle-btn {
