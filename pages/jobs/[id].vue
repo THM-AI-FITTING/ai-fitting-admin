@@ -589,7 +589,6 @@ const downloadImage = async (url: string) => {
 .comparison-layout {
   display: flex;
   align-items: stretch;
-  gap: 1.5rem;
   width: 100%;
 }
 
@@ -598,7 +597,7 @@ const downloadImage = async (url: string) => {
     flex-direction: column;
     height: auto;
     min-height: 0;
-    gap: 1.5rem;
+    gap: 1.5rem; /* Mobile/Tablet Gap restored */
   }
   .flow-arrow {
     transform: rotate(180deg);
@@ -609,9 +608,18 @@ const downloadImage = async (url: string) => {
 
 
 .comparison-card {
-  flex: 1;
-  min-height: 0; /* flex 아이템 오버플로우 방지 */
+  flex: 0 1 31%; /* Reduced width to allow for gaps */
+  min-height: 0;
   overflow: hidden;
+}
+
+@media (min-width: 1101px) {
+  .person-card {
+    margin-right: 2rem; /* Wide gap between Person and Product */
+  }
+  .product-card {
+    margin-right: 1rem; /* Standard gap before Arrow/Result */
+  }
 }
 
 .highlight {
@@ -672,7 +680,7 @@ const downloadImage = async (url: string) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 1rem;
+  /* padding: 0 1rem; */
   flex-shrink: 0;
 }
 
@@ -1161,6 +1169,7 @@ const downloadImage = async (url: string) => {
   background-clip: padding-box, border-box;
   position: relative;
   overflow: visible;
+  margin-left: 1rem;
 }
 
 .fancy-title {

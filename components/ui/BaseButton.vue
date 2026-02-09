@@ -137,7 +137,7 @@ const iconSize = computed(() => {
   color: var(--color-text-muted);
 }
 .btn-ghost:not(:disabled):hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(99, 102, 241, 0.08); /* Sophisticated Indigo tint */
   color: var(--color-text-main);
 }
 

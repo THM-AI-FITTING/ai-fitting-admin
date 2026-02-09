@@ -82,11 +82,28 @@
               :loading="pending"
               @row-click="goToJobDetail"
             >
+              <template #requestId="{ row }">
+                <div class="table-id-cell">
+                  <div class="id-badge">
+                    <Fingerprint :size="14" class="id-icon" />
+                    <span class="mono">{{ row.requestId }}</span>
+                  </div>
+                </div>
+              </template>
+              <template #owner="{ row }">
+                <div class="table-owner-cell">
+                  <User :size="14" class="owner-icon" />
+                  <span>{{ row.owner }}</span>
+                </div>
+              </template>
               <template #status="{ row }">
                 <StatusBadge :status="row.status" />
               </template>
               <template #sysRegDtm="{ row }">
-                {{ formatDate(row.sysRegDtm) }}
+                <div class="table-date-cell">
+                  <Calendar :size="14" class="date-icon" />
+                  <span>{{ formatDateTime(row.sysRegDtm) }}</span>
+                </div>
               </template>
             </BaseTable>
           </div>
@@ -125,7 +142,7 @@
         <BaseCard title="최근 실패 목록">
           <div class="failed-list">
             <div 
-              v-for="job in stats?.failedJobs || []" 
+              v-for="job in (stats?.failedJobs || []).slice(0, 10)" 
               :key="job.requestId" 
               class="failed-item"
               @click="goToJobDetail(job)"
@@ -157,7 +174,10 @@ import {
   Loader2, 
   CheckCircle, 
   AlertOctagon,
-  RefreshCw 
+  RefreshCw,
+  Fingerprint,
+  User,
+  Calendar
 } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
@@ -179,7 +199,19 @@ const jobColumns = [
   { key: 'sysRegDtm', label: '요청 시간' },
 ];
 
-const formatDate = (ts: number) => new Date(ts).toLocaleString('ko-KR');
+const formatDate = (ts: number) => new Date(ts).toLocaleDateString('ko-KR');
+
+const formatDateTime = (ts: number) => {
+  const date = new Date(ts);
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
 
 const formatTimeAgo = (ts: any) => {
   const date = new Date(ts);
@@ -306,6 +338,7 @@ const goToJobDetail = (row: any) => {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
+  align-items: stretch; /* Cards will have the same height */
 }
 
 @media (max-width: 1024px) {
@@ -327,6 +360,23 @@ const goToJobDetail = (row: any) => {
 .section-side {
   min-width: 0;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-main :deep(.base-card),
+.section-side :deep(.base-card) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-main :deep(.card-body),
+.section-side :deep(.card-body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .spin {
@@ -409,6 +459,19 @@ const goToJobDetail = (row: any) => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  max-height: 480px; /* Aligned with Recent Jobs table typical height */
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-right: -0.5rem;
+}
+
+/* Custom scrollbar for failed list */
+.failed-list::-webkit-scrollbar {
+  width: 4px;
+}
+.failed-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
 }
 
 .failed-item {
@@ -420,7 +483,7 @@ const goToJobDetail = (row: any) => {
   transition: all 0.2s;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
+  /* overflow: hidden removed to prevent content clipping */
 }
 
 .failed-item:hover {
@@ -457,12 +520,74 @@ const goToJobDetail = (row: any) => {
   font-size: 0.9rem;
   color: var(--color-danger);
   word-break: break-all;
+  line-height: 1.5;
+  margin-top: 0.4rem;
 }
 
 .empty-text {
   text-align: center;
   color: var(--color-text-muted);
   padding: 2rem;
+}
+
+/* PC Table Refinements */
+.section-main :deep(.base-table thead th) {
+  background: rgba(15, 23, 42, 0.08); /* More sophisticated Slate background */
+  color: var(--color-text-main);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--color-border);
+  padding: 0.85rem 1.5rem;
+}
+
+body.light-mode .section-main :deep(.base-table thead th) {
+  background: rgba(99, 102, 241, 0.03); /* Soft Indigo tint for light mode */
+}
+
+.table-id-cell {
+  display: flex;
+  align-items: center;
+}
+
+.id-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.1);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+}
+
+.id-icon {
+  opacity: 0.7;
+}
+
+.table-owner-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.owner-icon {
+  color: var(--color-text-muted);
+}
+
+.table-date-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.date-icon {
+  opacity: 0.6;
 }
 
 @keyframes spin {

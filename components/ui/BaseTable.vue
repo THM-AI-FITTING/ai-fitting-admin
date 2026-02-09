@@ -132,7 +132,7 @@ const toggleSelectAll = (checked: boolean) => {
 th {
   text-align: left;
   padding: 1rem 1.5rem;
-  background: rgba(0, 0, 0, 0.05); /* Neutral dark for both themes */
+  background: rgba(148, 163, 184, 0.1); /* Cleaner Slate-toned tint */
   color: var(--color-text-muted);
   font-weight: 500;
   font-size: 0.875rem;
