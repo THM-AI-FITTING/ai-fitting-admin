@@ -29,20 +29,23 @@
             <option value="asc">등록순</option>
           </select>
         </div>
-        <BaseButton variant="primary" class="search-btn" @click="refresh">검색</BaseButton>
-      </div>
-
-      <div class="view-actions-standalone" v-if="selectedJobs.length > 0">
-        <BaseButton 
-          variant="danger" 
-          size="sm" 
-          class="delete-btn animate-fade-in"
-          :loading="deleting"
-          @click="deleteSelectedJobs"
-        >
-          <Trash2 :size="16" />
-          {{ selectedJobs.length }}개 삭제
-        </BaseButton>
+        
+        <div class="filter-actions">
+          <Transition name="fade-slide">
+            <BaseButton 
+              v-if="selectedJobs.length > 0"
+              variant="danger" 
+              size="sm" 
+              class="delete-btn"
+              :loading="deleting"
+              @click="deleteSelectedJobs"
+            >
+              <Trash2 :size="16" />
+              {{ selectedJobs.length }}개 삭제
+            </BaseButton>
+          </Transition>
+          <BaseButton variant="primary" class="search-btn" @click="refresh">검색</BaseButton>
+        </div>
       </div>
     </div>
 
@@ -328,17 +331,35 @@ const formatSimpleDate = (dateStr: string) => {
 .page-controls {
   margin-bottom: 0.5rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 }
 
 .filter-panel {
   display: flex;
-  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
   padding: 1rem;
   flex: 1;
-  align-items: flex-end;
   border: 1px solid var(--color-border);
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
 }
 
 .filter-grid {
@@ -458,11 +479,17 @@ const formatSimpleDate = (dateStr: string) => {
     display: none !important;
   }
   
+  .filter-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
   .delete-btn {
     width: 100%;
-    margin-right: 0;
     justify-content: center;
-    height: 40px;
+    height: 44px;
+    margin-right: 0;
   }
 }
 
