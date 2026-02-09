@@ -2,10 +2,10 @@
   <div class="login-container">
     <div class="login-card animate-fade-in">
       <div class="login-header">
-        <div class="logo-box">
+        <!-- <div class="logo-box">
           <Sparkles :size="32" class="logo-icon" />
-        </div>
-        <h1>AI Fitting Admin</h1>
+        </div> -->
+        <h1><span class="gradient-text">AI Fitting</span> Admin</h1>
         <p class="subtitle">계속하려면 API 키를 입력하세요</p>
       </div>
 

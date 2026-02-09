@@ -81,9 +81,9 @@ const handleLogout = () => {
     <aside :class="['sidebar', { 'sidebar-closed': !isSidebarOpen, 'mobile-open': isMobileMenuOpen }]">
       <div class="sidebar-header">
         <div class="logo-area" v-if="isSidebarOpen">
-          <div class="logo-icon">
+          <!-- <div class="logo-icon">
             <Sparkles :size="16" />
-          </div>
+          </div> -->
           <span class="logo-text"><span class="gradient-text">AI Fitting</span> Admin</span>
         </div>
         <button class="toggle-btn" @click="toggleSidebar">
@@ -121,8 +121,8 @@ const handleLogout = () => {
         </div>
 
         <div class="header-actions">
-          <button class="theme-toggle" @click="toggleTheme" title="테마 전환">
-            <component :is="theme === 'dark' ? Sun : Moon" :size="20" />
+          <button class="theme-toggle" @click="toggleTheme" :title="theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'">
+            {{ theme === 'dark' ? '☀️' : '🌙' }}
           </button>
           
           <div class="header-divider hidden-mobile"></div>
@@ -286,22 +286,24 @@ const handleLogout = () => {
 }
 
 .theme-toggle {
-  color: var(--color-text-muted);
-  width: 40px;
-  height: 40px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-main);
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
-  transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-border);
+  width: 40px;
+  height: 40px;
 }
 
 .theme-toggle:hover {
-  color: var(--color-text-main);
   background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
+  transform: rotate(15deg);
 }
 
 .user-profile {

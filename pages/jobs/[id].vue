@@ -720,9 +720,8 @@ const downloadImage = async (url: string) => {
     width: 82vw !important;
     min-width: 82vw !important;
     scroll-snap-align: center;
-    background: #ffffff !important;
+    background: var(--color-bg-surface) !important;
     border-radius: 24px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
     flex-shrink: 0 !important;
   }
 
@@ -734,7 +733,7 @@ const downloadImage = async (url: string) => {
   .comparison-card :deep(.card-title) {
     font-size: 1.6rem !important;
     font-weight: 800 !important;
-    color: #1e293b;
+    color: var(--color-text-main);
     letter-spacing: -0.03em;
   }
 
@@ -753,7 +752,7 @@ const downloadImage = async (url: string) => {
     width: 100%;
     padding: 0 1rem 1.2rem;
     z-index: 50;
-    background: linear-gradient(to top, #f7f9fb 80%, transparent);
+    background: linear-gradient(to top, var(--color-bg-main) 80%, transparent);
   }
 
   .indicator-track {
@@ -787,7 +786,7 @@ const downloadImage = async (url: string) => {
   flex-shrink: 0;
   overflow: visible;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--color-bg-alt);
 }
 
 @media (max-width: 768px) {
@@ -991,10 +990,10 @@ const downloadImage = async (url: string) => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin-left: auto; /* 우측 정렬 */
   transition: all 0.2s ease;
 }
