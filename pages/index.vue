@@ -181,9 +181,12 @@ const jobColumns = [
 
 const formatDate = (ts: number) => new Date(ts).toLocaleString('ko-KR');
 
-const formatTimeAgo = (ts: number) => {
-  if (!ts || isNaN(ts)) return '-일 전';
-  const diff = Date.now() - ts;
+const formatTimeAgo = (ts: any) => {
+  const date = new Date(ts);
+  const time = date.getTime();
+  if (!time || isNaN(time)) return '-일 전';
+  
+  const diff = Date.now() - time;
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}분 전`;
   const hours = Math.floor(mins / 60);
@@ -307,8 +310,10 @@ const goToJobDetail = (row: any) => {
 
 @media (max-width: 1024px) {
   .content-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
+    width: 100%;
+    overflow: hidden;
   }
 }
 
@@ -318,8 +323,10 @@ const goToJobDetail = (row: any) => {
   }
 }
 
-.section-main {
+.section-main,
+.section-side {
   min-width: 0;
+  width: 100%;
 }
 
 .spin {
@@ -355,6 +362,9 @@ const goToJobDetail = (row: any) => {
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .mobile-job-card:active {
@@ -377,6 +387,8 @@ const goToJobDetail = (row: any) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .job-card-footer {
@@ -406,6 +418,9 @@ const goToJobDetail = (row: any) => {
   padding: 1rem;
   cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .failed-item:hover {
@@ -423,15 +438,25 @@ const goToJobDetail = (row: any) => {
 .failed-id {
   font-weight: 600;
   color: var(--color-text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .failed-time {
   color: var(--color-text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: right;
+  min-width: 70px;
 }
 
 .failed-reason {
   font-size: 0.9rem;
   color: var(--color-danger);
+  word-break: break-all;
 }
 
 .empty-text {

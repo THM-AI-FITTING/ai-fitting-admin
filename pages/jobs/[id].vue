@@ -91,6 +91,7 @@
     </BaseCard>
 
     <div class="comparison-layout" ref="comparisonLayout">
+      <div class="scroll-spacer mobile-only"></div>
       <!-- 1. Person Card -->
       <BaseCard v-if="job.personUrl" class="comparison-card person-card animate-fade-in">
         <template #header>
@@ -141,7 +142,6 @@
           <div class="image-wrapper main-result">
             <BaseImage :src="job.url" alt="Result" fit="contain" show-zoom :zoom-icon-size="20" @zoom="openZoom(job.url, '가상 피팅 결과')" />
           </div>
-
         </div>
       </BaseCard>
 
@@ -175,6 +175,8 @@
           </div>
         </div>
       </BaseCard>
+
+      <div class="scroll-spacer mobile-only"></div>
 
       <!-- 슬라이드 인디케이터 (모바일 전용) -->
       <div class="mobile-slide-indicator">
@@ -704,12 +706,18 @@ const downloadImage = async (url: string) => {
     gap: 1rem !important;
     scroll-snap-type: x mandatory !important;
     gap: 1rem !important;
-    padding: 0 9vw 1.5rem !important; /* 양옆 패딩으로 첫번째/마지막 카드 중앙 정렬 유도 (100 - 82) / 2 */
-    margin: 0 !important; /* 음수 마진 제거 */
+    padding: 0 0 1.5rem !important; /* 사이드 패딩 제거, spacer로 조절 */
+    margin: 0 !important;
     -webkit-overflow-scrolling: touch;
     height: auto;
     position: relative;
-    scrollbar-width: none; /* Firefox */
+    scrollbar-width: none;
+  }
+
+  .scroll-spacer {
+    flex: 0 0 9vw !important; /* 메인 카드 너비 82vw를 중앙에 놓기 위한 좌우 여백 */
+    width: 9vw !important;
+    min-width: 9vw !important;
   }
   .comparison-layout::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */

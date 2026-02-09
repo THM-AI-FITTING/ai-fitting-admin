@@ -482,6 +482,7 @@ const copyToClipboard = async (text: string, id: string) => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 1;
   min-width: 0;
 }
 
@@ -547,6 +548,9 @@ const copyToClipboard = async (text: string, id: string) => {
 .key-text {
   font-size: 0.9rem;
   transition: all 0.2s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .key-text.clickable {
@@ -571,6 +575,7 @@ const copyToClipboard = async (text: string, id: string) => {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
   min-width: 0;
 }
 
@@ -638,6 +643,7 @@ const copyToClipboard = async (text: string, id: string) => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .action-btn-mobile {
