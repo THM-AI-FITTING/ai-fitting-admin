@@ -20,13 +20,12 @@ import { useTheme } from '~/composables/useTheme';
 const route = useRoute();
 const isSidebarOpen = ref(true);
 const { theme, toggleTheme, updateBodyClass } = useTheme();
+const authCookie = useCookie('ai_admin_key');
+const ownerCookie = useCookie('ai_admin_owner');
 
-// 서버 사이드와 클라이언트 사이드에서 테마 클래스를 동기화합니다.
-useHead({
-  bodyAttrs: {
-    class: computed(() => theme.value === 'light' ? 'light-mode' : '')
-  }
-});
+// 쿠키가 없을 경우 '관리자'를 기본값으로 사용
+const adminOwner = computed(() => ownerCookie.value || '관리자');
+const avatarInitial = computed(() => adminOwner.value.charAt(0).toUpperCase());
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -38,6 +37,22 @@ const navigation = computed(() => [
   { name: 'AI 가상 피팅 목록', href: '/jobs', icon: List, active: route.path.startsWith('/jobs') || route.path.startsWith('/images') },
   // { name: '실행 결과 조회', href: '/images', icon: ImageIcon, active: route.path.startsWith('/images') }, // 숨김 처리
 ]);
+
+const handleLogout = () => {
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  
+  // 로그아웃 시 세션 쿠키 삭제
+  const authCookie = useCookie('ai_admin_key');
+  const ownerCookie = useCookie('ai_admin_owner');
+  authCookie.value = null;
+  ownerCookie.value = null;
+  
+  // 로그아웃 시 테마를 라이트 모드로 리셋 (사용자 요청: 로그인창은 라이트모드 기본)
+  theme.value = 'light';
+  updateBodyClass(); // 즉시 반영
+  
+  useRouter().push('/login');
+};
 </script>
 
 <template>
@@ -69,10 +84,9 @@ const navigation = computed(() => [
       </nav>
 
       <div class="sidebar-footer">
-        <button class="nav-item logout-btn">
-          <LogOut :size="20" />
-          <span v-if="isSidebarOpen" class="nav-text">로그아웃</span>
-        </button>
+        <div class="footer-info" v-if="isSidebarOpen">
+          <p>© 2026 AI-Fitting</p>
+        </div>
       </div>
     </aside>
 
@@ -84,10 +98,18 @@ const navigation = computed(() => [
           <button class="theme-toggle" @click="toggleTheme" title="테마 전환">
             <component :is="theme === 'dark' ? Sun : Moon" :size="20" />
           </button>
+          
+          <div class="header-divider"></div>
+
           <div class="user-profile">
-            <div class="avatar">A</div>
-            <span class="username">관리자</span>
+            <div class="avatar">{{ avatarInitial }}</div>
+            <span class="username">{{ adminOwner }}</span>
           </div>
+
+          <button class="header-logout-btn" @click="handleLogout" title="로그아웃">
+            <LogOut :size="18" />
+            <span>로그아웃</span>
+          </button>
         </div>
       </header>
       
@@ -162,7 +184,7 @@ const navigation = computed(() => [
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.5rem;
 }
 
 .theme-toggle {
@@ -206,5 +228,37 @@ const navigation = computed(() => [
 .username {
   font-weight: 500;
   font-size: 0.9rem;
+}
+
+.header-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  margin: 0 0.5rem;
+}
+
+.header-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.header-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+
+.footer-info {
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  opacity: 0.7;
 }
 </style>
