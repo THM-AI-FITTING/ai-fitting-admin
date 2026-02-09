@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { 
   LayoutDashboard, 
@@ -19,6 +19,8 @@ import { useTheme } from '~/composables/useTheme';
 
 const route = useRoute();
 const isSidebarOpen = ref(true);
+const isMobileMenuOpen = ref(false); // 모바일 전용 수동 열림 상태
+
 const { theme, toggleTheme, updateBodyClass } = useTheme();
 const authCookie = useCookie('ai_admin_key');
 const ownerCookie = useCookie('ai_admin_owner');
@@ -30,6 +32,19 @@ const avatarInitial = computed(() => adminOwner.value.charAt(0).toUpperCase());
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
 };
+
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+};
+
+const closeMobileMenu = () => {
+  isMobileMenuOpen.value = false;
+};
+
+// 라우트 변경 시 모바일 메뉴 닫기
+watch(() => route.path, () => {
+  closeMobileMenu();
+});
 
 const navigation = computed(() => [
   { name: '대시보드', href: '/', icon: LayoutDashboard, active: route.path === '/' },
@@ -57,8 +72,13 @@ const handleLogout = () => {
 
 <template>
   <div class="app-layout">
+    <!-- Mobile Sidebar Backdrop -->
+    <Transition name="fade">
+      <div v-if="isMobileMenuOpen" class="sidebar-backdrop" @click="closeMobileMenu"></div>
+    </Transition>
+
     <!-- Sidebar -->
-    <aside :class="['sidebar', { 'sidebar-closed': !isSidebarOpen }]">
+    <aside :class="['sidebar', { 'sidebar-closed': !isSidebarOpen, 'mobile-open': isMobileMenuOpen }]">
       <div class="sidebar-header">
         <div class="logo-area" v-if="isSidebarOpen">
           <div class="logo-icon">
@@ -91,24 +111,30 @@ const handleLogout = () => {
     </aside>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'with-sidebar-closed': !isSidebarOpen }">
       <header class="top-header">
-        <h1 class="page-title">{{ route.meta.title || '대시보드' }}</h1>
+        <div class="header-left">
+          <button class="mobile-menu-btn" @click="toggleMobileMenu">
+            <Menu :size="24" />
+          </button>
+          <h1 class="page-title">{{ route.meta.title || '대시보드' }}</h1>
+        </div>
+
         <div class="header-actions">
           <button class="theme-toggle" @click="toggleTheme" title="테마 전환">
             <component :is="theme === 'dark' ? Sun : Moon" :size="20" />
           </button>
           
-          <div class="header-divider"></div>
+          <div class="header-divider hidden-mobile"></div>
 
           <div class="user-profile">
             <div class="avatar">{{ avatarInitial }}</div>
-            <span class="username">{{ adminOwner }}</span>
+            <span class="username hidden-mobile">{{ adminOwner }}</span>
           </div>
 
           <button class="header-logout-btn" @click="handleLogout" title="로그아웃">
             <LogOut :size="18" />
-            <span>로그아웃</span>
+            <span class="hidden-mobile">로그아웃</span>
           </button>
         </div>
       </header>
@@ -148,11 +174,86 @@ const handleLogout = () => {
   color: var(--color-text-main);
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 1.25rem; /* PC에서 약간 축소 (기본값 대응) */
+  font-weight: 700;
+}
+
+.mobile-menu-btn {
+  display: none;
+  color: var(--color-text-main);
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
 .toggle-btn {
   color: var(--color-text-muted);
   padding: 0.5rem;
   border-radius: var(--radius-md);
 }
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    height: 100vh;
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(260px);
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .hidden-mobile {
+    display: none !important;
+  }
+
+  .page-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .header-actions {
+    gap: 0.25rem;
+  }
+
+  .header-logout-btn {
+    padding: 0.5rem;
+  }
+}
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .toggle-btn:hover {
   color: var(--color-text-main);
@@ -177,9 +278,6 @@ const handleLogout = () => {
   width: 100%;
 }
 
-.page-title {
-  font-size: 1.25rem;
-}
 
 .header-actions {
   display: flex;

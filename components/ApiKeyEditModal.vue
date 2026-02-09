@@ -1,12 +1,28 @@
 <template>
   <BaseModal v-model="isOpen" title="API 키 수정">
     <div class="edit-form">
-      <BaseInput 
-        :model-value="apiKey" 
-        label="API 키 (수정 불가)" 
-        readonly
-        class="mb-4 readonly-input"
-      />
+      <div class="key-field">
+        <BaseInput 
+          :model-value="apiKey" 
+          label="API 키 (수정 불가)" 
+          readonly
+          class="readonly-input flex-1"
+        />
+        <div class="key-action-wrapper">
+          <BaseButton 
+            size="sm" 
+            variant="ghost" 
+            class="copy-btn"
+            title="복사"
+            @click="copyToClipboard"
+          >
+            <Copy :size="18" />
+          </BaseButton>
+          <Transition name="fade-up">
+            <div v-if="showTooltip" class="copy-tooltip-modal">복사 완료!</div>
+          </Transition>
+        </div>
+      </div>
 
       <BaseInput 
         v-model="form.owner" 
@@ -51,7 +67,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue';
-import { Calendar } from 'lucide-vue-next';
+import { Calendar, Copy } from 'lucide-vue-next';
 import BaseModal from '~/components/ui/BaseModal.vue';
 import BaseInput from '~/components/ui/BaseInput.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
@@ -87,6 +103,19 @@ const form = reactive({
 });
 
 const loading = ref(false);
+const showTooltip = ref(false);
+
+const copyToClipboard = async () => {
+  try {
+    await navigator.clipboard.writeText(apiKey.value);
+    showTooltip.value = true;
+    setTimeout(() => {
+      showTooltip.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('Copy failed:', err);
+  }
+};
 
 const formatDateForInput = (val: any) => {
   if (!val) return '';
@@ -144,6 +173,72 @@ const close = () => {
 
 .readonly-input {
   opacity: 0.7;
+}
+
+.key-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.flex-1 { flex: 1; }
+
+.key-action-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.copy-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: var(--color-bg-main);
+  border: 1px solid var(--color-border);
+}
+
+.copy-tooltip-modal {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  z-index: 100;
+}
+
+.copy-tooltip-modal::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--color-primary);
+}
+
+.fade-up-enter-active, .fade-up-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fade-up-enter-from {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+}
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -5px);
 }
 
 :deep(.bright-icon .input-icon) {

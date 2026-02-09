@@ -38,6 +38,12 @@ defineProps<{
   justify-content: space-between;
 }
 
+@media (max-width: 640px) {
+  .card-header {
+    padding: 1rem 1.25rem;
+  }
+}
+
 .card-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -47,9 +53,21 @@ defineProps<{
   padding: 1.5rem;
 }
 
+@media (max-width: 640px) {
+  .card-body {
+    padding: 1.25rem 1rem;
+  }
+}
+
 .card-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--color-border);
   background: rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 640px) {
+  .card-footer {
+    padding: 0.75rem 1rem;
+  }
 }
 </style>

@@ -207,7 +207,6 @@ const close = () => {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  font-family: monospace;
 }
 
 .key-text {

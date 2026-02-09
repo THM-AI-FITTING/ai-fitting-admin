@@ -134,6 +134,27 @@ const handleLogin = async () => {
   z-index: 10;
 }
 
+@media (max-width: 480px) {
+  .login-card {
+    padding: 1.5rem;
+    border-radius: 1rem;
+  }
+  .logo-box {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: 1.4rem;
+  }
+  .theme-toggle-fixed {
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+  }
+}
+
 .login-header {
   text-align: center;
   margin-bottom: 2.5rem;

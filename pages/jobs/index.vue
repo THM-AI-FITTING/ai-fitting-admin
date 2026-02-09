@@ -5,35 +5,35 @@
 <template>
   <div class="jobs-page">
     <div class="page-controls animate-fade-in stagger-1">
-      <div class="filters">
-        <BaseInput 
-          v-model="filters.owner" 
-          placeholder="파트너명..." 
-          class="filter-input-sm"
-        />
-        <BaseInput 
-          v-model="filters.userId" 
-          placeholder="사용자 ID..." 
-          class="filter-input-sm"
-        />
-        <select v-model="filters.status" class="filter-select">
-          <option value="">모든 상태</option>
-          <option value="START">진행 중 (START)</option>
-          <option value="DONE">완료 (DONE)</option>
-          <option value="FAILED">실패 (FAILED)</option>
-        </select>
-        
-        <select v-model="sortOrder" class="filter-select">
-          <option value="desc">최신순</option>
-          <option value="asc">등록순</option>
-        </select>
-        
-        <BaseButton @click="refresh">검색</BaseButton>
+      <div class="filter-panel glass-panel">
+        <div class="filter-grid">
+          <BaseInput 
+            v-model="filters.owner" 
+            placeholder="파트너명..." 
+            class="filter-input-sm"
+          />
+          <BaseInput 
+            v-model="filters.userId" 
+            placeholder="사용자 ID..." 
+            class="filter-input-sm"
+          />
+          <select v-model="filters.status" class="filter-select">
+            <option value="">모든 상태</option>
+            <option value="START">진행 중 (START)</option>
+            <option value="DONE">완료 (DONE)</option>
+            <option value="FAILED">실패 (FAILED)</option>
+          </select>
+          
+          <select v-model="sortOrder" class="filter-select">
+            <option value="desc">최신순</option>
+            <option value="asc">등록순</option>
+          </select>
+        </div>
+        <BaseButton variant="primary" class="search-btn" @click="refresh">검색</BaseButton>
       </div>
 
-      <div class="view-toggles">
+      <div class="view-actions-standalone" v-if="selectedJobs.length > 0">
         <BaseButton 
-          v-if="selectedJobs.length > 0"
           variant="danger" 
           size="sm" 
           class="delete-btn animate-fade-in"
@@ -43,27 +43,31 @@
           <Trash2 :size="16" />
           {{ selectedJobs.length }}개 삭제
         </BaseButton>
-
-        <BaseButton 
-          variant="ghost" 
-          size="sm" 
-          :class="{ active: viewMode === 'grid' }"
-          @click="viewMode = 'grid'"
-        >
-          <LayoutGrid :size="20" />
-        </BaseButton>
-        <BaseButton 
-          variant="ghost" 
-          size="sm" 
-          :class="{ active: viewMode === 'list' }"
-          @click="viewMode = 'list'"
-        >
-          <ListIcon :size="20" />
-        </BaseButton>
       </div>
     </div>
 
     <BaseCard class="animate-fade-in stagger-2">
+      <template #header>
+        <div class="card-header-actions">
+          <span class="card-header-title">작업 내역</span>
+          <div class="view-toggles-integrated">
+            <button 
+              :class="['toggle-btn-modern', { active: viewMode === 'grid' }]"
+              @click="viewMode = 'grid'"
+              title="그리드 보기"
+            >
+              <LayoutGrid :size="18" />
+            </button>
+            <button 
+              :class="['toggle-btn-modern', { active: viewMode === 'list' }]"
+              @click="viewMode = 'list'"
+              title="목록 보기"
+            >
+              <ListIcon :size="18" />
+            </button>
+          </div>
+        </div>
+      </template>
       <!-- List View -->
       <BaseTable 
         v-if="viewMode === 'list'"
@@ -328,34 +332,74 @@ const formatSimpleDate = (dateStr: string) => {
   align-items: center;
 }
 
-.filters {
+.filter-panel {
   display: flex;
   gap: 1rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.view-toggles {
-  display: flex;
-  background: var(--color-bg-alt);
-  padding: 4px;
-  border-radius: var(--radius-md);
+  padding: 1rem;
+  flex: 1;
+  align-items: flex-end;
   border: 1px solid var(--color-border);
-  gap: 4px;
 }
 
-.view-toggles :deep(.base-btn) {
-  transition: all 0.2s;
+.filter-grid {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.card-header-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  opacity: 0.8;
+  letter-spacing: -0.01em;
+}
+
+.view-toggles-integrated {
+  display: flex;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  gap: 2px;
+}
+
+.toggle-btn-modern {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
   background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.view-toggles :deep(.base-btn.active) {
-  background: var(--color-primary) !important;
-  color: white !important;
+.toggle-btn-modern:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-main);
 }
 
-.view-toggles :deep(.base-btn.active svg) {
-  color: white !important;
+.toggle-btn-modern.active {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+}
+
+.view-actions-standalone {
+  display: flex;
+  align-items: center;
 }
 
 .jobs-grid {
@@ -363,6 +407,63 @@ const formatSimpleDate = (dateStr: string) => {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1.5rem;
   padding: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .jobs-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .page-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .filter-panel {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  
+  .filter-input-sm {
+    width: 100% !important;
+  }
+  
+  .filter-select {
+    width: 100% !important;
+  }
+  
+  .search-btn {
+    width: 100%;
+    height: 44px;
+    font-weight: 600;
+  }
+
+  .view-actions-standalone {
+    width: 100%;
+  }
+
+  .view-toggles-integrated {
+    display: none !important;
+  }
+  
+  .delete-btn {
+    width: 100%;
+    margin-right: 0;
+    justify-content: center;
+    height: 40px;
+  }
 }
 
 .job-thumb-card {
@@ -415,14 +516,14 @@ const formatSimpleDate = (dateStr: string) => {
 
 .thumb-status {
   position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  background: rgba(0, 0, 0, 0.7); /* Darker background as requested */
+  bottom: 0.5rem; /* 하단으로 이동 */
+  right: 0.5rem;  /* 우측으로 이동 */
+  background: rgba(0, 0, 0, 0.7);
   padding: 0;
-  border-radius: 999px; /* Match badge shape */
+  border-radius: 999px;
   display: flex;
   transform: scale(0.8);
-  transform-origin: top left;
+  transform-origin: bottom right; /* 하단 우측 기준 스케일 */
 }
 
 .thumb-status :deep(.status-badge) {
@@ -435,6 +536,25 @@ const formatSimpleDate = (dateStr: string) => {
   flex-direction: column;
   gap: 0.5rem;
   background: var(--color-bg-surface);
+}
+
+@media (max-width: 640px) {
+  .thumb-info {
+    padding: 0.75rem;
+    gap: 0.35rem;
+  }
+  
+  .requestId-row {
+    margin-bottom: 0.1rem;
+  }
+  
+  .mono {
+    font-size: 0.75rem;
+  }
+  
+  .info-row {
+    font-size: 0.7rem;
+  }
 }
 
 .requestId-row {

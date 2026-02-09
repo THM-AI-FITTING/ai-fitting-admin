@@ -49,14 +49,14 @@ export default defineNuxtConfig({
   vite: {
     server: {
       proxy: {
-        '/api': {
+        '/api/': {
           target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
           changeOrigin: true
         },
-        '/ai-fitting-admin/api': {
+        '/ai-fitting-admin/api/': {
           target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/ai-fitting-admin\/api/, '/api')
+          rewrite: (path) => path.replace(/^\/ai-fitting-admin\/api\//, '/api/')
         }
       }
     }

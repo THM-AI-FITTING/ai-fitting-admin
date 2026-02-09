@@ -10,125 +10,142 @@
 
     <!-- Job Header Info -->
     <BaseCard class="header-card animate-fade-in stagger-1">
-      <div class="header-info-grid">
-        <div class="header-item">
-          <span class="header-label">
-            <Fingerprint :size="14" class="label-icon" />
-            요청 ID
-          </span>
-          <div class="header-value-row">
-            <div class="copy-container">
-              <span class="header-value mono clickable" @click="copyToClipboard(job.requestId)">{{ job.requestId }}</span>
-              <Transition name="fade-up">
-                <div v-if="showTooltip" class="copy-tooltip">복사 완료!</div>
-              </Transition>
-            </div>
-            <button class="copy-btn-inline" @click="copyToClipboard(job.requestId)" title="ID 복사">
-              <Copy :size="14" />
-            </button>
+      <div class="header-info-container" :class="{ 'is-expanded': isHeaderExpanded }">
+        <!-- Primary Row: Partner & Status (Always Visible on Mobile) -->
+        <div class="header-primary-row">
+          <div class="header-item">
+            <span class="header-label">
+              <UserIcon :size="14" class="label-icon" />
+              파트너
+            </span>
+            <span class="header-value">{{ job.owner }}</span>
           </div>
+
+          <div class="header-divider mobile-hidden"></div>
+
+          <div class="header-item">
+            <span class="header-label">
+              <Activity :size="14" class="label-icon" />
+              상태
+            </span>
+            <StatusBadge :status="job.status" />
+          </div>
+
+          <!-- Mobile Toggle Button -->
+          <button class="header-toggle-btn mobile-only" @click="isHeaderExpanded = !isHeaderExpanded">
+            <ChevronDown :size="20" class="toggle-icon" :class="{ 'is-rotated': isHeaderExpanded }" />
+          </button>
         </div>
         
-        <div class="header-divider"></div>
+        <div class="header-divider mobile-hidden"></div>
 
-        <div class="header-item">
-          <span class="header-label">
-            <UserIcon :size="14" class="label-icon" />
-            파트너
-          </span>
-          <span class="header-value">{{ job.owner }}</span>
-        </div>
+        <!-- Secondary Row: ID, User, Date (Collapsible on Mobile) -->
+        <div class="header-secondary-row">
+          <div class="header-item">
+            <span class="header-label">
+              <Fingerprint :size="14" class="label-icon" />
+              요청 ID
+            </span>
+            <div class="header-value-row">
+              <div class="copy-container">
+                <span class="header-value mono clickable" @click="copyToClipboard(job.requestId)">{{ job.requestId }}</span>
+                <Transition name="fade-up">
+                  <div v-if="showTooltip" class="copy-tooltip">복사 완료!</div>
+                </Transition>
+              </div>
+              <button class="copy-btn-inline" @click="copyToClipboard(job.requestId)" title="ID 복사">
+                <Copy :size="14" />
+              </button>
+            </div>
+          </div>
 
-        <div class="header-divider"></div>
+          <div class="header-divider mobile-hidden"></div>
 
-        <div class="header-item">
-          <span class="header-label">
-            <HardDrive :size="14" class="label-icon" />
-            사용자 ID
-          </span>
-          <span class="header-value">{{ job.userId }}</span>
-        </div>
+          <div class="header-item">
+            <span class="header-label">
+              <HardDrive :size="14" class="label-icon" />
+              사용자 ID
+            </span>
+            <span class="header-value">{{ job.userId }}</span>
+          </div>
 
-        <div class="header-divider"></div>
+          <div class="header-divider mobile-hidden"></div>
 
-        <div class="header-item">
-          <span class="header-label">
-            <Activity :size="14" class="label-icon" />
-            상태
-          </span>
-          <StatusBadge :status="job.status" />
-        </div>
-
-        <div class="header-divider"></div>
-
-        <div class="header-item">
-          <span class="header-label">
-            <Clock :size="14" class="label-icon" />
-            생성일
-          </span>
-          <span class="header-value">{{ new Date(job.sysRegDtm).toLocaleString('ko-KR', { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit', 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            second: '2-digit',
-            hour12: false 
-          }) }}</span>
+          <div class="header-item">
+            <span class="header-label">
+              <Clock :size="14" class="label-icon" />
+              생성일
+            </span>
+            <span class="header-value">{{ new Date(job.sysRegDtm).toLocaleString('ko-KR', { 
+              year: 'numeric', 
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              second: '2-digit',
+              hour12: false 
+            }) }}</span>
+          </div>
         </div>
       </div>
     </BaseCard>
 
-    <div class="comparison-layout">
-      <!-- Input Section -->
-      <BaseCard title="입력 이미지" class="comparison-card input-section">
-        <div class="input-comparison-grid">
-          <div v-if="job.personUrl" class="comparison-item">
-            <div class="image-wrapper">
-              <BaseImage :src="job.personUrl" alt="Person" show-zoom @zoom="openZoom(job.personUrl, '대상 사람')" />
-            </div>
-            <div class="item-label">
-              <UserIcon :size="16" class="label-icon" />
-              사람
-            </div>
+    <div class="comparison-layout" ref="comparisonLayout">
+      <!-- 1. Person Card -->
+      <BaseCard v-if="job.personUrl" class="comparison-card person-card animate-fade-in">
+        <template #header>
+          <div class="card-header-styled title-person">
+            <UserIcon :size="20" class="header-icon" />
+            인물 이미지
           </div>
-          <div v-if="job.productUrl" class="comparison-item">
-            <div class="image-wrapper">
-              <BaseImage :src="job.productUrl" alt="Product" show-zoom @zoom="openZoom(job.productUrl, '대상 상품')" />
-            </div>
-            <div class="item-label">
-              <Shirt :size="16" class="label-icon secondary" />
-              상품
-            </div>
+        </template>
+        <div class="comparison-item centered">
+          <div class="image-wrapper">
+            <BaseImage :src="job.personUrl" alt="Person" show-zoom @zoom="openZoom(job.personUrl, '대상 사람')" />
           </div>
         </div>
       </BaseCard>
 
-      <!-- Flow Arrow (Visible on desktop) -->
+      <!-- 2. Product Card -->
+      <BaseCard v-if="job.productUrl" class="comparison-card product-card animate-fade-in stagger-2">
+        <template #header>
+          <div class="card-header-styled title-product">
+            <Shirt :size="20" class="header-icon" />
+            의류 이미지
+          </div>
+        </template>
+        <div class="comparison-item centered">
+          <div class="image-wrapper">
+            <BaseImage :src="job.productUrl" alt="Product" show-zoom @zoom="openZoom(job.productUrl, '대상 상품')" />
+          </div>
+        </div>
+      </BaseCard>
+
+      <!-- Arrow 2 -->
       <div class="flow-arrow animate-fade-in stagger-3" v-if="job.status === 'DONE' || job.status === 'FAILED'" :class="{ 'flow-arrow-failed': job.status === 'FAILED' }">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
       </div>
 
+      <!-- 3. Result Card -->
       <BaseCard v-if="job.status === 'DONE' && job.url" class="comparison-card result-section premium animate-fade-in stagger-4">
         <template #header>
           <div class="fancy-title">
             <Sparkles :size="20" class="sparkle-icon" />
             가상 피팅 결과
           </div>
+          <button class="download-btn-header" @click="downloadImage(job.url)" title="이미지 다운로드">
+            <Download :size="18" />
+          </button>
         </template>
         <div class="result-display">
           <div class="image-wrapper main-result">
             <BaseImage :src="job.url" alt="Result" fit="contain" show-zoom :zoom-icon-size="20" @zoom="openZoom(job.url, '가상 피팅 결과')" />
           </div>
-          <div class="result-actions">
-            <BaseButton variant="primary" @click="downloadImage(job.url)">
-              이미지 다운로드
-            </BaseButton>
-          </div>
+
         </div>
       </BaseCard>
 
-      <!-- 실패 이유 표시 섹션 -->
+      <!-- Failure Section -->
       <BaseCard v-if="job.status === 'FAILED'" title="작업 실패" class="comparison-card failure-section animate-fade-in stagger-4">
         <div class="failure-display">
           <div class="failure-message-box">
@@ -158,6 +175,13 @@
           </div>
         </div>
       </BaseCard>
+
+      <!-- 슬라이드 인디케이터 (모바일 전용) -->
+      <div class="mobile-slide-indicator">
+        <div class="indicator-track">
+          <div class="indicator-bar" :style="{ width: `${barWidth}%`, left: `${scrollProgress}%` }"></div>
+        </div>
+      </div>
     </div>
 
     <!-- 이미지 확대 오버레이 -->
@@ -185,9 +209,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { Search, X, User as UserIcon, Shirt, Sparkles, Copy, Fingerprint, Clock, Activity, HardDrive } from 'lucide-vue-next';
+import { Search, X, User as UserIcon, Shirt, Sparkles, Copy, Fingerprint, Clock, Activity, HardDrive, Download, ChevronDown } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
@@ -208,6 +232,69 @@ const isExpanded = ref(false); // 상세 확대(Toggle Zoom) 상태
 const activeZoomImage = ref('');
 const zoomTitle = ref('');
 const showTooltip = ref(false);
+const isHeaderExpanded = ref(false); // Mobile header collapse state
+
+const scrollProgress = ref(0);
+const barWidth = ref(33); // Initial default
+const comparisonLayout = ref<HTMLElement | null>(null);
+
+const handleScroll = (e: Event) => {
+  const el = e.target as HTMLElement;
+  const scrollWidth = el.scrollWidth;
+  const clientWidth = el.clientWidth;
+  
+  if (scrollWidth <= clientWidth) {
+    barWidth.value = 100;
+    scrollProgress.value = 0;
+    return;
+  }
+  
+  // 1. Dynamic Bar Width (%)
+  const ratio = clientWidth / scrollWidth;
+  const currentBarWidth = ratio * 100;
+  barWidth.value = currentBarWidth;
+
+  // 2. Max Scrollable Distance (Pixels)
+  const maxScroll = scrollWidth - clientWidth;
+  
+  // 3. Current Scroll Position
+  const scrollLeft = el.scrollLeft;
+
+  // Tolerance check: if close to end (within 5px), snap to end
+  const isAtEnd = maxScroll - scrollLeft < 5;
+  
+  // Max left position (%)
+  const maxLeft = 100 - currentBarWidth;
+
+  if (isAtEnd) {
+    scrollProgress.value = maxLeft;
+  } else {
+    // Current Left (%)
+    // (scrollLeft / maxScroll) * maxLeft
+    const progressRatio = scrollLeft / maxScroll;
+    const currentLeft = progressRatio * maxLeft;
+    scrollProgress.value = Math.max(0, Math.min(currentLeft, maxLeft));
+  }
+};
+
+onMounted(() => {
+  if (comparisonLayout.value) {
+    comparisonLayout.value.addEventListener('scroll', handleScroll);
+    // 초기 로드 시 한 번 실행하여 바 크기 설정
+    // setTimeout을 사용하여 레이아웃이 안정된 후 실행
+    setTimeout(() => {
+      // Fake event
+      const mockEvent = { target: comparisonLayout.value } as unknown as Event;
+      handleScroll(mockEvent);
+    }, 100);
+  }
+});
+
+onUnmounted(() => {
+  if (comparisonLayout.value) {
+    comparisonLayout.value.removeEventListener('scroll', handleScroll);
+  }
+});
 
 const openZoom = (url: string, title: string) => {
   activeZoomImage.value = url;
@@ -280,9 +367,19 @@ const downloadImage = async (url: string) => {
 .job-detail-page {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .job-detail-page {
+    /* background-color: #f7f9fb;  삭제 - 기본 테마 사용 */
+    min-height: 50vh;
+    margin: -1.5rem -1rem; /* 레이아웃 패딩 상쇄 */
+    padding: 1.5rem 1rem;
+    gap: 1rem;
+  }
 }
 
 /* 글로벌 애니메이션 유틸리티 사용 ( main.css 참고 ) */
@@ -290,6 +387,15 @@ const downloadImage = async (url: string) => {
 /* Header Info (Slimmer) */
 .header-card {
   padding: 0;
+}
+
+@media (max-width: 768px) {
+  .header-card {
+    width: 82vw;
+    margin: 0 auto;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  }
 }
 
 .header-info-grid {
@@ -336,7 +442,7 @@ const downloadImage = async (url: string) => {
 
 .header-value {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.9rem; /* Reduced from 1rem */
   color: var(--color-text-main);
   transition: all 0.2s;
 }
@@ -390,6 +496,7 @@ const downloadImage = async (url: string) => {
   cursor: pointer;
   text-decoration: none;
   border-bottom: 2px solid transparent;
+  color: var(--color-text-main) !important; /* 모바일에서 클릭 시에도 색상 유지 */
 }
 
 .mono.clickable:hover {
@@ -399,11 +506,80 @@ const downloadImage = async (url: string) => {
 }
 
 @media (max-width: 900px) {
-  .header-divider {
+  .header-info-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding:  0.5rem 0.5rem;
+    gap: 1rem;
+  }
+
+  .header-primary-row {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     width: 100%;
+  }
+
+  .header-secondary-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    display: none; /* 기본 숨김 */
+  }
+
+  .header-info-container.is-expanded .header-secondary-row {
+    display: flex;
+    animation: slideDown 0.3s ease forwards;
+  }
+
+  .header-divider.mobile-hidden {
     display: none;
   }
-  .header-info-grid {
-    gap: 1.5rem 2rem;
+
+  .header-toggle-btn.mobile-only {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.05);
+    color: var(--color-text-muted);
+    z-index: 10; /* Ensure clickability */
+    position: relative;
+    cursor: pointer;
+  }
+
+  .toggle-icon {
+    transition: transform 0.3s ease;
+  }
+  
+  .toggle-icon.is-rotated {
+    transform: rotate(180deg);
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@media (min-width: 901px) {
+  .header-info-container {
+     display: flex;
+     align-items: center;
+     flex-wrap: wrap;
+     gap: 1.5rem;
+     padding: 0.5rem 0.5rem;
+  }
+  .header-primary-row, .header-secondary-row {
+     display: contents; /* PC에서는 flex 구조 해제하고 부모 그리드 따름 */
+  }
+  .header-toggle-btn.mobile-only {
+    display: none;
   }
 }
 
@@ -413,22 +589,22 @@ const downloadImage = async (url: string) => {
   align-items: stretch;
   gap: 1.5rem;
   width: 100%;
-  min-height: 700px; /* 고정 높이 대신 최소 높이로 변경하여 내용물 잘림 방지 */
 }
 
 @media (max-width: 1100px) {
   .comparison-layout {
     flex-direction: column;
-    height: auto; /* 모바일에서는 자동 높이 */
-    min-height: 800px;
+    height: auto;
+    min-height: 0;
+    gap: 1.5rem;
   }
   .flow-arrow {
-    transform: rotate(90deg);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    transform: rotate(180deg);
+    padding: 1rem 0;
+    margin: 0.5rem 0;
   }
 }
+
 
 .comparison-card {
   flex: 1;
@@ -446,6 +622,13 @@ const downloadImage = async (url: string) => {
   gap: 1.5rem;
   padding: 0.5rem;
   height: 100%;
+}
+
+@media (max-width: 768px) {
+  .input-comparison-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
 
 .comparison-item {
@@ -488,6 +671,110 @@ const downloadImage = async (url: string) => {
   align-items: center;
   justify-content: center;
   padding: 0 1rem;
+  flex-shrink: 0;
+}
+
+/* Unused visibility classes removed */
+/* The classes .desktop-only, .mobile-only, and .input-section were not found in the provided document. */
+
+/* Gradient text styles for title-person and title-product */
+/* These classes were not found in the provided document, so they are added here. */
+.title-person {
+  background: linear-gradient(to right, #6366f1, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent; /* Fallback for browsers that don't support -webkit-text-fill-color */
+}
+
+.title-product {
+  background: linear-gradient(to right, #10b981, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent; /* Fallback for browsers that don't support -webkit-text-fill-color */
+}
+
+@media (max-width: 768px) {
+  .comparison-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    gap: 1rem !important;
+    scroll-snap-type: x mandatory !important;
+    gap: 1rem !important;
+    padding: 0 9vw 1.5rem !important; /* 양옆 패딩으로 첫번째/마지막 카드 중앙 정렬 유도 (100 - 82) / 2 */
+    margin: 0 !important; /* 음수 마진 제거 */
+    -webkit-overflow-scrolling: touch;
+    height: auto;
+    position: relative;
+    scrollbar-width: none; /* Firefox */
+  }
+  .comparison-layout::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .comparison-card {
+    flex: 0 0 82vw !important; /* 가로 크기 강제 */
+    width: 82vw !important;
+    min-width: 82vw !important;
+    scroll-snap-align: center;
+    background: #ffffff !important;
+    border-radius: 24px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .comparison-card :deep(.card-header) {
+    border-bottom: none;
+    padding: 1.25rem 1.5rem 1rem; /* 안쪽 여백 축소 및 통일 */
+  }
+
+  .comparison-card :deep(.card-title) {
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    color: #1e293b;
+    letter-spacing: -0.03em;
+  }
+
+  .flow-arrow {
+    display: none !important; /* 모바일에서 화살표 숨김 */
+  }
+
+  .flow-arrow svg {
+    width: 20px;
+  }
+
+  .mobile-slide-indicator {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 0 1rem 1.2rem;
+    z-index: 50;
+    background: linear-gradient(to top, #f7f9fb 80%, transparent);
+  }
+
+  .indicator-track {
+    width: 82vw; /* 원래 너비(82vw)로 복원 */
+    height: 4px; /* 4px 두께로 복합 */
+    background: transparent; /* 트랙을 보이지 않게 처리 (사용자 요청) */
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative; /* Ensure absolute child follows this track */
+    margin: 0 auto; /* 중앙 정렬 */
+  }
+
+  .indicator-bar {
+    height: 100%; /* track height(4px)를 그대로 사용 */
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    border-radius: 4px;
+    width: 33%; /* Default, overridden by inline style */
+    position: absolute; /* left positioning requires absolute */
+    top: 0;
+    transition: left 0.1s linear, width 0.1s linear; 
+  }
 }
 
 .image-wrapper {
@@ -499,6 +786,15 @@ const downloadImage = async (url: string) => {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   overflow: visible;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+  .image-wrapper {
+    border-width: 1.5px;
+    padding-top: 130%; /* 모바일에서 약간 더 길게 */
+  }
 }
 
 .image-wrapper :deep(.base-image) {
@@ -682,6 +978,46 @@ const downloadImage = async (url: string) => {
   padding-top: 0.5rem;
 }
 
+@media (max-width: 768px) {
+  .result-actions {
+    display: none;
+  }
+}
+
+.download-btn-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-left: auto; /* 우측 정렬 */
+  transition: all 0.2s ease;
+}
+
+.download-btn-header:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.download-btn-header:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .download-btn-header {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+
+
 /* 결과 섹션 카드 본체 높이 채우기 */
 .result-section :deep(.card-body) {
   display: flex;
@@ -711,26 +1047,7 @@ const downloadImage = async (url: string) => {
 }
 
 /* 입력/실패 섹션 높이 맞춤 */
-.input-section,
-.failure-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* flex 오버플로우 방지 */
-  overflow: hidden;
-}
-
-/* 입력/실패 섹션 내부 card-body 높이 채우기 */
-.input-section :deep(.card-body),
-.failure-section :deep(.card-body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* 실패 섹션 스타일 - 흰색 배경 */
+/* Failure Section Style */
 .failure-section {
   border: 1px solid rgba(239, 68, 68, 0.25);
   background: var(--color-card-bg, #ffffff);
@@ -744,6 +1061,15 @@ const downloadImage = async (url: string) => {
   flex: 1;
   padding: 1.5rem;
   min-height: 0;
+}
+
+@media (max-width: 640px) {
+  .failure-display {
+    padding: 1rem;
+  }
+  .failure-message-box {
+    padding: 1.5rem 1rem;
+  }
 }
 
 /* 실패 메시지 박스 - 전체 컨텐츠 감싸기 */
@@ -857,5 +1183,41 @@ const downloadImage = async (url: string) => {
 .result-section :deep(.card-header) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.02);
+}
+.card-header-styled {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+
+.title-person {
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-product {
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-icon {
+  opacity: 1;
+  -webkit-text-fill-color: initial; /* Gradient text fill 상쇄 */
+  color: var(--color-primary); /* Default color for person icon */
+}
+
+.title-product .header-icon {
+  color: #10b981; /* Green color for product icon */
+}
+
+.comparison-item.centered {
+  justify-content: center;
 }
 </style>

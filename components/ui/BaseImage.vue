@@ -7,23 +7,25 @@
       <span class="placeholder-text">{{ hasError ? '이미지 로드 실패' : fallbackText }}</span>
     </div>
     <div v-else class="image-wrapper">
-      <img 
-        :src="src" 
-        :alt="alt" 
-        :style="{ objectFit: fit }"
-        class="actual-image"
-        @error="handleError"
-      />
-      <BaseButton 
-        v-if="showZoom" 
-        class="zoom-btn" 
-        variant="ghost" 
-        size="sm"
-        @click.stop="$emit('zoom', src)"
-        title="이미지 확대"
-      >
-        <Search :size="18" />
-      </BaseButton>
+      <div class="inner-image-wrapper">
+        <img 
+          :src="src" 
+          :alt="alt" 
+          :style="{ objectFit: fit }"
+          class="actual-image"
+          @error="handleError"
+        />
+        <BaseButton 
+          v-if="showZoom" 
+          class="zoom-btn" 
+          variant="ghost" 
+          size="sm"
+          @click.stop="$emit('zoom', src)"
+          title="이미지 확대"
+        >
+          <Search :size="18" />
+        </BaseButton>
+      </div>
     </div>
   </div>
 </template>
@@ -70,6 +72,7 @@ const handleError = () => {
   justify-content: center;
   overflow: hidden;
   position: relative;
+  border-radius: 12px;
 }
 
 .image-placeholder {
@@ -112,10 +115,20 @@ const handleError = () => {
   height: 100%;
 }
 
+.inner-image-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
 .actual-image {
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   display: block;
+  object-fit: inherit;
 }
 
 .zoom-btn {
@@ -139,6 +152,13 @@ const handleError = () => {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   z-index: 10;
+}
+
+@media (max-width: 768px) {
+  .zoom-btn {
+    opacity: 1 !important;
+    transform: scale(1) translateY(0) !important;
+  }
 }
 
 .image-wrapper:hover .zoom-btn {

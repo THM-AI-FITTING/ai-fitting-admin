@@ -74,19 +74,41 @@
             </BaseButton>
           </template>
           
-          <BaseTable 
-            :columns="jobColumns" 
-            :data="stats?.recentJobs || []" 
-            :loading="pending"
-            @row-click="goToJobDetail"
-          >
-            <template #status="{ row }">
-              <StatusBadge :status="row.status" />
-            </template>
-            <template #sysRegDtm="{ row }">
-              {{ formatDate(row.sysRegDtm) }}
-            </template>
-          </BaseTable>
+          <!-- Desktop Table View -->
+          <div class="hidden-mobile">
+            <BaseTable 
+              :columns="jobColumns" 
+              :data="stats?.recentJobs || []" 
+              :loading="pending"
+              @row-click="goToJobDetail"
+            >
+              <template #status="{ row }">
+                <StatusBadge :status="row.status" />
+              </template>
+              <template #sysRegDtm="{ row }">
+                {{ formatDate(row.sysRegDtm) }}
+              </template>
+            </BaseTable>
+          </div>
+
+          <!-- Mobile Card List View -->
+          <div class="mobile-only job-list-mobile">
+            <div 
+              v-for="job in stats?.recentJobs || []" 
+              :key="job.requestId"
+              class="mobile-job-card"
+              @click="goToJobDetail(job)"
+            >
+              <div class="job-card-header">
+                <span class="job-id mono">{{ job.requestId }}</span>
+                <StatusBadge :status="job.status" size="sm" />
+              </div>
+              <div class="job-card-footer">
+                <span class="job-owner">{{ job.owner }}</span>
+                <span class="job-date">{{ formatDate(job.sysRegDtm) }}</span>
+              </div>
+            </div>
+          </div>
           
           <template #footer>
             <div class="flex-center">
@@ -188,6 +210,13 @@ const goToJobDetail = (row: any) => {
   gap: 1.5rem;
 }
 
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
 .stat-card :deep(.card-header) {
   padding: 1rem 1.25rem 0.5rem;
   border-bottom: none;
@@ -231,6 +260,34 @@ const goToJobDetail = (row: any) => {
   margin-bottom: 0.75rem;
 }
 
+@media (max-width: 640px) {
+  .stat-value {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .stat-card :deep(.card-body) {
+    padding: 0 1rem 0.75rem;
+  }
+  .stat-header {
+    width: 100%;
+    justify-content: space-between; /* 아이콘을 우측 끝으로 밀어냄 */
+    margin-bottom: 0.5rem;
+  }
+  .stat-title {
+    font-size: 0.8rem;
+    white-space: nowrap; /* 줄바꿈 방지 */
+    margin-right: 0.25rem;
+  }
+  .stat-change, .stat-desc {
+    font-size: 0.75rem;
+    white-space: nowrap; /* 줄바꿈 방지 */
+    letter-spacing: -0.02em;
+  }
+  .icon-box {
+    padding: 0.4rem; /* 모바일에서 아이콘 박스 크기 축소 */
+  }
+}
+
 .stat-change, .stat-desc {
   font-size: 0.85rem;
   display: flex;
@@ -251,6 +308,13 @@ const goToJobDetail = (row: any) => {
 @media (max-width: 1024px) {
   .content-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page {
+    gap: 1rem;
   }
 }
 
@@ -260,6 +324,72 @@ const goToJobDetail = (row: any) => {
 
 .spin {
   animation: spin 1s linear infinite;
+}
+
+/* Mobile Job Card List */
+.mobile-only {
+  display: none !important; /* 기본적으로 숨김 (PC) */
+}
+
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important; /* 모바일에서 숨김 */
+  }
+  .mobile-only {
+    display: block !important; /* 모바일에서만 표시 */
+  }
+}
+
+.job-list-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.mobile-job-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-job-card:active {
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(0.98);
+}
+
+.job-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+}
+
+.job-id {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.job-owner {
+  font-weight: 500;
+  color: var(--color-text-main);
 }
 
 /* Failed List */
