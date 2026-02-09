@@ -125,7 +125,7 @@
           @click="goToDetail(job)"
         >
           <div class="thumb-container">
-            <BaseImage :src="job.url" :alt="job.requestId" fit="cover" />
+            <BaseImage :src="job.url" :alt="job.requestId" fit="cover" :rounded="false" />
             <div class="thumb-status">
               <StatusBadge :status="job.status" size="sm" />
             </div>

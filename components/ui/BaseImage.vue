@@ -1,5 +1,5 @@
 <template>
-  <div class="base-image" :class="{ 'has-error': hasError || !src }">
+  <div class="base-image" :class="{ 'has-error': hasError || !src, 'no-radius': !rounded }">
     <div v-if="!src || hasError" class="image-placeholder">
       <div class="placeholder-icon-wrapper">
         <ImageOff :size="placeholderSize * 1.2" class="placeholder-icon" />
@@ -42,6 +42,7 @@ interface Props {
   fallbackText?: string;
   showZoom?: boolean;
   zoomIconSize?: number;
+  rounded?: boolean; // Prop to control border radius
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -51,7 +52,8 @@ const props = withDefaults(defineProps<Props>(), {
   placeholderSize: 32,
   fallbackText: '이미지 없음',
   showZoom: false,
-  zoomIconSize: 18
+  zoomIconSize: 18,
+  rounded: true // Standalone images are rounded by default
 });
 
 defineEmits(['zoom']);
@@ -73,6 +75,10 @@ const handleError = () => {
   overflow: hidden;
   position: relative;
   border-radius: 12px;
+}
+
+.base-image.no-radius {
+  border-radius: 0;
 }
 
 .image-placeholder {
