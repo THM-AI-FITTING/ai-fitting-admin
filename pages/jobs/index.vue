@@ -33,6 +33,18 @@
 
       <div class="view-toggles">
         <BaseButton 
+          v-if="selectedJobs.length > 0"
+          variant="danger" 
+          size="sm" 
+          class="delete-btn animate-fade-in"
+          :loading="deleting"
+          @click="deleteSelectedJobs"
+        >
+          <Trash2 :size="16" />
+          {{ selectedJobs.length }}개 삭제
+        </BaseButton>
+
+        <BaseButton 
           variant="ghost" 
           size="sm" 
           :class="{ active: viewMode === 'grid' }"
@@ -58,6 +70,8 @@
         :columns="columns" 
         :data="visibleJobs" 
         :show-no="true"
+        :show-checkbox="true"
+        v-model:selected-items="selectedJobs"
         :loading="pending"
         @row-click="goToDetail"
       >
@@ -100,12 +114,19 @@
           v-for="job in visibleJobs" 
           :key="job.requestId" 
           class="job-thumb-card glass-panel"
+          :class="{ selected: isSelected(job) }"
           @click="goToDetail(job)"
         >
           <div class="thumb-container">
             <BaseImage :src="job.url" :alt="job.requestId" fit="cover" />
             <div class="thumb-status">
               <StatusBadge :status="job.status" size="sm" />
+            </div>
+            <div class="thumb-checkbox" @click.stop>
+              <BaseCheckbox 
+                :model-value="isSelected(job)" 
+                @change="toggleSelection(job)" 
+              />
             </div>
           </div>
           <div class="thumb-info">
@@ -155,7 +176,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { ImageIcon, X, List as ListIcon, LayoutGrid } from 'lucide-vue-next';
+import { ImageIcon, X, List as ListIcon, LayoutGrid, Trash2 } from 'lucide-vue-next';
 
 // 전역 상태 사용 (사용자 입력 필터, 페이지 크기, 보기 모드 유지)
 const { filters, pageSize, viewMode } = useJobsState();
@@ -166,6 +187,7 @@ import BaseInput from '~/components/ui/BaseInput.vue';
 import BaseTable from '~/components/ui/BaseTable.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
 import BaseImage from '~/components/ui/BaseImage.vue';
+import BaseCheckbox from '~/components/ui/BaseCheckbox.vue';
 
 definePageMeta({
   title: 'AI 피팅 작업 목록'
@@ -188,6 +210,7 @@ const hasMore = computed(() => (jobs.value || []).length > pageSize.value);
 
 const refresh = () => {
   pageSize.value = 15;
+  selectedJobs.value = [];
   originalRefresh();
 };
 
@@ -212,6 +235,45 @@ const columns = [
   { key: 'status', label: '상태' },
   { key: 'sysRegDtm', label: '요청 시간' },
 ];
+
+// Selection State
+const selectedJobs = ref<any[]>([]);
+const deleting = ref(false);
+
+const isSelected = (job: any) => {
+  return selectedJobs.value.some(item => item.requestId === job.requestId);
+};
+
+const toggleSelection = (job: any) => {
+  const index = selectedJobs.value.findIndex(item => item.requestId === job.requestId);
+  if (index > -1) {
+    selectedJobs.value.splice(index, 1);
+  } else {
+    selectedJobs.value.push(job);
+  }
+};
+
+const deleteSelectedJobs = async () => {
+  if (!confirm(`${selectedJobs.value.length}개의 항목을 삭제하시겠습니까?`)) return;
+  
+  deleting.value = true;
+  try {
+    const deletePromises = selectedJobs.value.map(job => 
+      $fetch(`${config.public.apiBase}/api/jobs/${job.requestId}`, {
+        method: 'DELETE'
+      })
+    );
+    
+    await Promise.all(deletePromises);
+    alert('삭제되었습니다.');
+    refresh();
+  } catch (err) {
+    console.error('Delete failed:', err);
+    alert('삭제 중 오류가 발생했습니다.');
+  } finally {
+    deleting.value = false;
+  }
+};
 
 const router = useRouter();
 const goToDetail = (row: any) => {
@@ -278,6 +340,11 @@ const goToDetail = (row: any) => {
   flex-direction: column;
 }
 
+.job-thumb-card.selected {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
 .job-thumb-card:hover {
   transform: translateY(-4px);
   border-color: var(--color-primary);
@@ -290,6 +357,24 @@ const goToDetail = (row: any) => {
   border-radius: var(--radius-md);
   overflow: hidden;
   position: relative;
+}
+
+.thumb-checkbox {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  display: flex;
+  padding: 2px;
+}
+
+:root[data-theme="dark"] .thumb-checkbox {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.delete-btn {
+  margin-right: 0.5rem;
+  gap: 0.4rem;
 }
 
 

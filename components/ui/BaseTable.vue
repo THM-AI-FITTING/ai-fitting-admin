@@ -8,6 +8,12 @@
     <table class="base-table">
       <thead>
         <tr>
+          <th v-if="showCheckbox" class="col-checkbox">
+            <BaseCheckbox 
+              :model-value="isAllSelected" 
+              @change="toggleSelectAll" 
+            />
+          </th>
           <th v-if="showNo" class="col-no">No.</th>
           <th v-for="col in columns" :key="col.key" :style="{ width: col.width }">
             {{ col.label }}
@@ -30,7 +36,13 @@
             </div>
           </td>
         </tr>
-        <tr v-else v-for="(row, index) in data" :key="index" @click="$emit('row-click', row)" class="data-row">
+        <tr v-else v-for="(row, index) in data" :key="index" @click="$emit('row-click', row)" class="data-row" :class="{ selected: isSelected(row) }">
+          <td v-if="showCheckbox" class="col-checkbox" @click.stop>
+            <BaseCheckbox 
+              :model-value="isSelected(row)" 
+              @change="toggleSelection(row)" 
+            />
+          </td>
           <td v-if="showNo" class="col-no">{{ index + 1 + itemOffset }}</td>
           <td v-for="col in columns" :key="col.key">
             <slot :name="col.key" :row="row" :index="index">
@@ -44,6 +56,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import BaseCheckbox from './BaseCheckbox.vue';
+
 export interface TableColumn {
   key: string;
   label: string;
@@ -55,14 +70,48 @@ const props = withDefaults(defineProps<{
   data: any[];
   loading?: boolean;
   showNo?: boolean;
+  showCheckbox?: boolean;
+  selectedItems?: any[];
+  idKey?: string;
   itemOffset?: number;
 }>(), {
   loading: false,
   showNo: false,
+  showCheckbox: false,
+  selectedItems: () => [],
+  idKey: 'requestId',
   itemOffset: 0
 });
 
-defineEmits(['row-click']);
+const emit = defineEmits(['row-click', 'update:selectedItems']);
+
+const isSelected = (row: any) => {
+  return props.selectedItems.some(item => item[props.idKey] === row[props.idKey]);
+};
+
+const isAllSelected = computed(() => {
+  return props.data.length > 0 && props.data.every(row => isSelected(row));
+});
+
+const toggleSelection = (row: any) => {
+  const newSelection = [...props.selectedItems];
+  const index = newSelection.findIndex(item => item[props.idKey] === row[props.idKey]);
+  
+  if (index > -1) {
+    newSelection.splice(index, 1);
+  } else {
+    newSelection.push(row);
+  }
+  emit('update:selectedItems', newSelection);
+};
+
+const toggleSelectAll = (checked: boolean) => {
+  if (checked) {
+    emit('update:selectedItems', [...props.data]);
+  } else {
+    emit('update:selectedItems', []);
+  }
+};
 </script>
 
 <style scoped>
@@ -97,6 +146,12 @@ td {
   font-size: 0.95rem;
 }
 
+.col-checkbox {
+  width: 40px;
+  text-align: center;
+  padding: 0 0 0 1.5rem;
+}
+
 .col-no {
   width: 60px;
   text-align: center;
@@ -110,6 +165,10 @@ td {
 
 .data-row:hover {
   background: rgba(0, 0, 0, 0.02);
+}
+
+.data-row.selected {
+  background: rgba(99, 102, 241, 0.05);
 }
 
 .data-row:last-child td {

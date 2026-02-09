@@ -87,9 +87,6 @@
             <BaseButton variant="primary" @click="downloadImage(job.url)">
               이미지 다운로드
             </BaseButton>
-            <NuxtLink :to="`/images/${job.requestId}`">
-              <BaseButton variant="ghost">상세 리뷰</BaseButton>
-            </NuxtLink>
           </div>
         </div>
       </BaseCard>
@@ -233,7 +230,7 @@ const downloadImage = async (url: string) => {
 .job-detail-page {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -535,7 +532,7 @@ const downloadImage = async (url: string) => {
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: 550px;
+  max-height: 500px;
   object-fit: contain;
   border-radius: 12px;
 }
