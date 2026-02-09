@@ -1,8 +1,10 @@
 <template>
   <div class="base-image" :class="{ 'has-error': hasError || !src }">
     <div v-if="!src || hasError" class="image-placeholder">
-      <ImageIcon :size="placeholderSize" />
-      <span class="placeholder-text">{{ fallbackText }}</span>
+      <div class="placeholder-icon-wrapper">
+        <ImageOff :size="placeholderSize * 1.2" class="placeholder-icon" />
+      </div>
+      <span class="placeholder-text">{{ hasError ? '이미지 로드 실패' : fallbackText }}</span>
     </div>
     <div v-else class="image-wrapper">
       <img 
@@ -28,7 +30,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { ImageIcon, Search } from 'lucide-vue-next';
+import { ImageOff, Search } from 'lucide-vue-next';
 
 interface Props {
   src?: string | null;
@@ -67,8 +69,38 @@ const handleError = () => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 12px; /* 전체 둥근 모서리 추가 */
+  position: relative;
+}
+
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-bg-alt) 0%, var(--color-bg-main) 100%);
+  color: var(--color-text-muted);
+}
+
+.placeholder-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--color-primary-rgb), 0.05);
+  border-radius: 50%;
+  color: var(--color-primary);
+  opacity: 0.6;
+}
+
+.placeholder-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  opacity: 0.7;
 }
 
 .image-wrapper {
@@ -76,17 +108,14 @@ const handleError = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 .actual-image {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   display: block;
-  border-radius: 12px; /* 실제 이미지에도 라운딩 적용 */
 }
 
 .zoom-btn {
@@ -99,11 +128,10 @@ const handleError = () => {
   padding: 0;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.15) !important;
-  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: white !important;
-  display: flex !important; /* 중앙 정렬 강제 */
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   opacity: 0;
@@ -113,37 +141,24 @@ const handleError = () => {
   z-index: 10;
 }
 
-/* BaseButton 내부 콘텐츠 정중앙 정렬 보정 */
-.zoom-btn :deep(.content) {
-  padding: 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
 .image-wrapper:hover .zoom-btn {
   opacity: 1;
   transform: scale(1) translateY(0);
 }
 
 .zoom-btn:hover {
-  background: rgba(255, 255, 255, 0.8) !important;
-  color: #0284c7 !important;
+  background: white !important;
+  color: var(--color-primary) !important;
   transform: scale(1.1) !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.6) !important;
 }
 
-:root[data-theme="dark"] .zoom-btn {
+:root[data-theme="dark"] .image-placeholder {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+:root[data-theme="dark"] .placeholder-icon-wrapper {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-:root[data-theme="dark"] .zoom-btn:hover {
-  background: rgba(255, 255, 255, 0.9);
-  color: #0f172a;
+  color: var(--color-text-muted);
 }
 </style>

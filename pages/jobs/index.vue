@@ -130,17 +130,25 @@
             </div>
           </div>
           <div class="thumb-info">
-            <div class="requestId text-sm mono truncate">{{ job.requestId }}</div>
-            <div class="owner text-xs text-muted">{{ job.owner }}</div>
-            <div class="date text-xs text-muted">{{ new Date(job.sysRegDtm).toLocaleString('ko-KR', { 
-              year: 'numeric', 
-              month: '2-digit', 
-              day: '2-digit', 
-              hour: '2-digit', 
-              minute: '2-digit', 
-              second: '2-digit',
-              hour12: false 
-            }) }}</div>
+            <div class="requestId-row">
+              <div class="copy-container">
+                <span class="mono text-truncate clickable" @click.stop="copyToClipboard(job.requestId)">{{ job.requestId }}</span>
+                <Transition name="fade-up">
+                  <div v-if="activeTooltipId === job.requestId" class="copy-tooltip">복사 완료!</div>
+                </Transition>
+              </div>
+              <button class="copy-btn" @click.stop="copyToClipboard(job.requestId)" title="ID 복사">
+                <Copy :size="12" />
+              </button>
+            </div>
+            <div class="info-row">
+              <User :size="12" class="info-icon" />
+              <span class="owner text-truncate">{{ job.owner }}</span>
+            </div>
+            <div class="info-row">
+              <Clock :size="12" class="info-icon" />
+              <span class="date">{{ formatSimpleDate(job.sysRegDtm) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -176,7 +184,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { ImageIcon, X, List as ListIcon, LayoutGrid, Trash2 } from 'lucide-vue-next';
+import { ImageIcon, X, List as ListIcon, LayoutGrid, Trash2, Copy, User, Clock } from 'lucide-vue-next';
 
 // 전역 상태 사용 (사용자 입력 필터, 페이지 크기, 보기 모드 유지)
 const { filters, pageSize, viewMode } = useJobsState();
@@ -279,6 +287,31 @@ const router = useRouter();
 const goToDetail = (row: any) => {
   router.push(`/jobs/${row.requestId}`);
 };
+
+const activeTooltipId = ref<string | null>(null);
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    activeTooltipId.value = text;
+    setTimeout(() => {
+      activeTooltipId.value = null;
+    }, 2000);
+  } catch (err) {
+    console.error('Copy failed:', err);
+  }
+};
+
+const formatSimpleDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
 </script>
 
 <style scoped>
@@ -338,6 +371,8 @@ const goToDetail = (row: any) => {
   border: 1px solid transparent;
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .job-thumb-card.selected {
@@ -395,19 +430,128 @@ const goToDetail = (row: any) => {
 }
 
 .thumb-info {
-  padding: 0.75rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
+  background: var(--color-bg-surface);
 }
 
-.truncate {
+.requestId-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.text-truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mono { font-family: monospace; }
+.copy-btn {
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-btn:hover {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.info-icon {
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.copy-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.copy-tooltip {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+  z-index: 100;
+}
+
+.copy-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--color-primary);
+}
+
+.fade-up-enter-active, .fade-up-leave-active {
+  transition: all 0.2s ease-out;
+}
+.fade-up-enter-from {
+  opacity: 0;
+  transform: translate(-50%, 5px);
+}
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -3px);
+}
+
+.mono {
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: -0.02em;
+  transition: all 0.2s;
+}
+
+.mono.clickable {
+  cursor: pointer;
+}
+
+.mono.clickable:hover {
+  text-decoration: underline;
+  color: var(--color-primary-light, #818cf8);
+}
+
+.owner {
+  font-weight: 500;
+  color: var(--color-text-main);
+}
+
+.date {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
 .text-muted { color: var(--color-text-muted); }
 
 .filter-input-sm {

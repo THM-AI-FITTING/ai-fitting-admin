@@ -12,23 +12,60 @@
     <BaseCard class="header-card animate-fade-in stagger-1">
       <div class="header-info-grid">
         <div class="header-item">
-          <span class="header-label">요청 ID</span>
-          <span class="header-value mono">{{ job.requestId }}</span>
+          <span class="header-label">
+            <Fingerprint :size="14" class="label-icon" />
+            요청 ID
+          </span>
+          <div class="header-value-row">
+            <div class="copy-container">
+              <span class="header-value mono clickable" @click="copyToClipboard(job.requestId)">{{ job.requestId }}</span>
+              <Transition name="fade-up">
+                <div v-if="showTooltip" class="copy-tooltip">복사 완료!</div>
+              </Transition>
+            </div>
+            <button class="copy-btn-inline" @click="copyToClipboard(job.requestId)" title="ID 복사">
+              <Copy :size="14" />
+            </button>
+          </div>
         </div>
+        
+        <div class="header-divider"></div>
+
         <div class="header-item">
-          <span class="header-label">파트너</span>
+          <span class="header-label">
+            <UserIcon :size="14" class="label-icon" />
+            파트너
+          </span>
           <span class="header-value">{{ job.owner }}</span>
         </div>
+
+        <div class="header-divider"></div>
+
         <div class="header-item">
-          <span class="header-label">사용자 ID</span>
+          <span class="header-label">
+            <HardDrive :size="14" class="label-icon" />
+            사용자 ID
+          </span>
           <span class="header-value">{{ job.userId }}</span>
         </div>
+
+        <div class="header-divider"></div>
+
         <div class="header-item">
-          <span class="header-label">상태</span>
+          <span class="header-label">
+            <Activity :size="14" class="label-icon" />
+            상태
+          </span>
           <StatusBadge :status="job.status" />
         </div>
+
+        <div class="header-divider"></div>
+
         <div class="header-item">
-          <span class="header-label">생성일</span>
+          <span class="header-label">
+            <Clock :size="14" class="label-icon" />
+            생성일
+          </span>
           <span class="header-value">{{ new Date(job.sysRegDtm).toLocaleString('ko-KR', { 
             year: 'numeric', 
             month: '2-digit', 
@@ -51,7 +88,7 @@
               <BaseImage :src="job.personUrl" alt="Person" show-zoom @zoom="openZoom(job.personUrl, '대상 사람')" />
             </div>
             <div class="item-label">
-              <User :size="16" class="label-icon" />
+              <UserIcon :size="16" class="label-icon" />
               사람
             </div>
           </div>
@@ -150,7 +187,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { Search, X, User, Shirt, Sparkles } from 'lucide-vue-next';
+import { Search, X, User as UserIcon, Shirt, Sparkles, Copy, Fingerprint, Clock, Activity, HardDrive } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
@@ -170,6 +207,7 @@ const isZoomOpen = ref(false);
 const isExpanded = ref(false); // 상세 확대(Toggle Zoom) 상태
 const activeZoomImage = ref('');
 const zoomTitle = ref('');
+const showTooltip = ref(false);
 
 const openZoom = (url: string, title: string) => {
   activeZoomImage.value = url;
@@ -183,6 +221,18 @@ const closeZoom = () => {
   isZoomOpen.value = false;
   isExpanded.value = false;
   document.body.style.overflow = '';
+};
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    showTooltip.value = true;
+    setTimeout(() => {
+      showTooltip.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('Copy failed:', err);
+  }
 };
 
 const toggleExpand = (e: MouseEvent) => {
@@ -245,38 +295,116 @@ const downloadImage = async (url: string) => {
 .header-info-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+}
+
+.header-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+  opacity: 0.5;
 }
 
 .header-item {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .header-label {
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  white-space: nowrap;
+}
+
+.label-icon {
+  opacity: 0.7;
+}
+
+.header-value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .header-value {
-  font-weight: 500;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text-main);
+  transition: all 0.2s;
 }
 
-.mono {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.9rem;
-  color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.1);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+.copy-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.copy-tooltip {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  z-index: 100;
+}
+
+.copy-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--color-primary);
+}
+
+.fade-up-enter-active, .fade-up-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fade-up-enter-from {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+}
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -5px);
+}
+
+.mono.clickable {
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.mono.clickable:hover {
+  color: var(--color-primary-light, #818cf8);
+  border-bottom-color: currentColor;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .header-divider {
+    display: none;
+  }
+  .header-info-grid {
+    gap: 1.5rem 2rem;
+  }
 }
 
 /* Comparison Layout (Aligned) */
