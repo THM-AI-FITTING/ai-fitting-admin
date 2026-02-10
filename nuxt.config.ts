@@ -43,7 +43,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // GitHub Pages 배포 시 환경 변수가 없을 경우를 대비해 HTTPS 도메인을 기본값으로 설정
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://new-ai-fitting-api-admin.duckdns.org'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://ai-fitting-api-admin.duckdns.org'
     }
   },
   vite: {
