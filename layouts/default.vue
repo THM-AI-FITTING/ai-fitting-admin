@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { 
   LayoutDashboard, 
   Key, 
@@ -13,7 +13,9 @@ import {
   Search,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  Camera,
+  Layers
 } from 'lucide-vue-next';
 import { useTheme } from '~/composables/useTheme';
 
@@ -46,11 +48,22 @@ watch(() => route.path, () => {
   closeMobileMenu();
 });
 
-const navigation = computed(() => [
-  { name: '대시보드', href: '/', icon: LayoutDashboard, active: route.path === '/' },
-  { name: 'API 키 관리', href: '/api-keys', icon: Key, active: route.path === '/api-keys' },
-  { name: 'AI 가상 피팅 목록', href: '/jobs', icon: List, active: route.path.startsWith('/jobs') || route.path.startsWith('/images') },
-  // { name: '실행 결과 조회', href: '/images', icon: ImageIcon, active: route.path.startsWith('/images') }, // 숨김 처리
+const menuGroups = computed(() => [
+  {
+    title: '기본 기능',
+    items: [
+      { name: '대시보드', href: '/', icon: LayoutDashboard, active: route.path === '/' },
+      { name: 'API 키 관리', href: '/api-keys', icon: Key, active: route.path === '/api-keys' },
+      { name: 'AI 가상 피팅 목록', href: '/jobs', icon: List, active: route.path.startsWith('/jobs') || route.path.startsWith('/images') },
+    ]
+  },
+  {
+    title: 'AI 스튜디오',
+    items: [
+      { name: '스튜디오 업로드', href: '/studio/upload', icon: Camera, active: route.path === '/studio/upload' },
+      { name: '스튜디오 작업 목록', href: '/studio', icon: Layers, active: route.path === '/studio' || (route.path.startsWith('/studio/') && route.path !== '/studio/upload') },
+    ]
+  }
 ]);
 
 const handleLogout = () => {
@@ -92,15 +105,18 @@ const handleLogout = () => {
       </div>
 
       <nav class="sidebar-nav">
-        <NuxtLink 
-          v-for="item in navigation" 
-          :key="item.name" 
-          :to="item.href"
-          :class="['nav-item', { 'active': item.active }]"
-        >
-          <component :is="item.icon" :size="20" />
-          <span v-if="isSidebarOpen" class="nav-text">{{ item.name }}</span>
-        </NuxtLink>
+        <div v-for="group in menuGroups" :key="group.title" class="nav-group">
+          <div v-if="isSidebarOpen" class="nav-group-title">{{ group.title }}</div>
+          <NuxtLink 
+            v-for="item in group.items" 
+            :key="item.name" 
+            :to="item.href"
+            :class="['nav-item', { 'active': item.active }]"
+          >
+            <component :is="item.icon" :size="20" />
+            <span v-if="isSidebarOpen" class="nav-text">{{ item.name }}</span>
+          </NuxtLink>
+        </div>
       </nav>
 
       <div class="sidebar-footer">
@@ -267,6 +283,23 @@ const handleLogout = () => {
 
 .nav-item.active svg {
   color: var(--color-accent);
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.nav-group-title {
+  padding: 0 1.25rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
 }
 
 .sidebar-footer {
