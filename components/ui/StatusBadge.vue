@@ -37,7 +37,7 @@ const props = defineProps<{
 }
 
 /* Status Variants */
-.active, .done {
+.active, .done, .success {
   background: rgba(16, 185, 129, 0.15);
   color: var(--color-success);
   border: 1px solid rgba(16, 185, 129, 0.3);
