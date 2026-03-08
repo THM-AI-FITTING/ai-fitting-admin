@@ -231,6 +231,14 @@ const goToDetail = (job: any) => {
   padding: 1.5rem;
 }
 
+@media (max-width: 640px) {
+  .studio-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+}
+
 .studio-item-card {
   display: flex;
   flex-direction: column;
@@ -255,9 +263,10 @@ const goToDetail = (job: any) => {
 
 .item-status {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  transform: scale(0.9);
+  bottom: 8px;
+  right: 8px;
+  transform: scale(0.85);
+  z-index: 5;
 }
 
 .item-info {

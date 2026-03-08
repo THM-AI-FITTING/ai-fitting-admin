@@ -26,11 +26,22 @@
           </div>
         </template>
         
-        <div class="products-grid">
-          <div v-for="(input, idx) in mockData.inputs" :key="idx" class="product-card glass-panel">
-            <div class="product-thumb">
-              <BaseImage :src="input.url" :alt="input.type" />
-              <div class="product-tag">{{ input.type }}</div>
+        <div class="slider-container-mobile">
+          <div class="horizontal-slider" ref="inputSlider">
+            <div class="scroll-spacer mobile-only"></div>
+            <div v-for="(input, idx) in mockData.inputs" :key="idx" class="product-card glass-panel">
+              <div class="product-thumb-vertical">
+                <BaseImage :src="input.url" :alt="input.type" />
+                <div class="product-tag">{{ input.type }}</div>
+              </div>
+            </div>
+            <div class="scroll-spacer mobile-only"></div>
+          </div>
+          
+          <!-- 슬라이드 인디케이터 (모바일 전용) -->
+          <div class="mobile-slide-indicator">
+            <div class="indicator-track">
+              <div class="indicator-bar" :style="{ width: `${inputScroll.barWidth}%`, left: `${inputScroll.progress}%` }"></div>
             </div>
           </div>
         </div>
@@ -50,22 +61,33 @@
           </div>
         </template>
 
-        <div class="results-grid">
-          <div v-for="res in mockData.results" :key="res.pose" class="result-item glass-panel">
-            <div class="result-thumb">
-              <BaseImage :src="res.url" :alt="res.pose" />
-              <div class="pose-tag">{{ res.pose }}</div>
-            </div>
-            <div class="result-info">
-              <span class="pose-name">{{ res.name }}</span>
-              <div class="result-btns">
-                <BaseButton size="sm" variant="ghost">
-                  <Download :size="14" />
-                </BaseButton>
-                <BaseButton size="sm" variant="ghost">
-                  <Maximize :size="14" />
-                </BaseButton>
+        <div class="slider-container-mobile">
+          <div class="horizontal-slider" ref="resultSlider">
+            <div class="scroll-spacer mobile-only"></div>
+            <div v-for="res in mockData.results" :key="res.pose" class="result-item glass-panel">
+              <div class="result-thumb-vertical">
+                <BaseImage :src="res.url" :alt="res.pose" />
+                <div class="pose-tag">{{ res.pose }}</div>
               </div>
+              <div class="result-info">
+                <span class="pose-name">{{ res.name }}</span>
+                <div class="result-btns">
+                  <BaseButton size="sm" variant="ghost">
+                    <Download :size="14" />
+                  </BaseButton>
+                  <BaseButton size="sm" variant="ghost">
+                    <Maximize :size="14" />
+                  </BaseButton>
+                </div>
+              </div>
+            </div>
+            <div class="scroll-spacer mobile-only"></div>
+          </div>
+
+          <!-- 슬라이드 인디케이터 (모바일 전용) -->
+          <div class="mobile-slide-indicator">
+            <div class="indicator-track">
+              <div class="indicator-bar" :style="{ width: `${resultScroll.barWidth}%`, left: `${resultScroll.progress}%` }"></div>
             </div>
           </div>
         </div>
@@ -75,6 +97,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, Download, Maximize } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
@@ -88,6 +111,45 @@ const jobId = route.params.id as string;
 
 definePageMeta({
   title: '스튜디오 작업 상세'
+});
+
+// Scroll Logic for Mobile Sliders
+const inputSlider = ref<HTMLElement | null>(null);
+const resultSlider = ref<HTMLElement | null>(null);
+
+const inputScroll = reactive({ progress: 0, barWidth: 50 });
+const resultScroll = reactive({ progress: 0, barWidth: 25 });
+
+const handleScroll = (el: HTMLElement, state: { progress: number, barWidth: number }) => {
+  const scrollWidth = el.scrollWidth;
+  const clientWidth = el.clientWidth;
+  
+  if (scrollWidth <= clientWidth) {
+    state.barWidth = 100;
+    state.progress = 0;
+    return;
+  }
+  
+  const ratio = clientWidth / scrollWidth;
+  state.barWidth = ratio * 100;
+
+  const maxScroll = scrollWidth - clientWidth;
+  const scrollLeft = el.scrollLeft;
+  const maxLeft = 100 - state.barWidth;
+
+  const progressRatio = scrollLeft / maxScroll;
+  state.progress = Math.max(0, Math.min(progressRatio * maxLeft, maxLeft));
+};
+
+onMounted(() => {
+  if (inputSlider.value) {
+    inputSlider.value.addEventListener('scroll', () => handleScroll(inputSlider.value!, inputScroll));
+    setTimeout(() => handleScroll(inputSlider.value!, inputScroll), 100);
+  }
+  if (resultSlider.value) {
+    resultSlider.value.addEventListener('scroll', () => handleScroll(resultSlider.value!, resultScroll));
+    setTimeout(() => handleScroll(resultSlider.value!, resultScroll), 100);
+  }
 });
 
 const mockData = {
@@ -167,7 +229,7 @@ const mockData = {
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1.5rem;
   padding: 1.5rem;
 }
@@ -178,8 +240,8 @@ const mockData = {
   border: 1px solid var(--color-border);
 }
 
-.product-thumb {
-  aspect-ratio: 16/10;
+.product-thumb-vertical {
+  aspect-ratio: 3/4;
   position: relative;
   background: var(--color-bg-main);
 }
@@ -211,7 +273,7 @@ const mockData = {
   flex-direction: column;
 }
 
-.result-thumb {
+.result-thumb-vertical {
   aspect-ratio: 3/4;
   position: relative;
   background: var(--color-bg-main);
@@ -244,7 +306,10 @@ const mockData = {
 
 .result-btns {
   display: flex;
-  gap: 0.25rem;
+}
+
+.mobile-only {
+  display: none;
 }
 
 @media (max-width: 640px) {
@@ -258,7 +323,115 @@ const mockData = {
   }
   
   .products-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* PC Grid Styles */
+.horizontal-slider {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (max-width: 1280px) {
+  .horizontal-slider {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.product-thumb-vertical, .result-thumb-vertical {
+  aspect-ratio: 3/4;
+  position: relative;
+  background: var(--color-bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem; /* PC Padding */
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+.product-thumb-vertical img, .result-thumb-vertical img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Mobile Styles */
+@media (max-width: 640px) {
+  .horizontal-slider {
+    display: flex !important;
+    gap: 1rem !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    width: 100% !important;
+    scroll-behavior: smooth;
+    grid-template-columns: none; /* Reset grid */
+  }
+
+  .horizontal-slider::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .scroll-spacer {
+    flex: 0 0 15vw !important;
+    width: 15vw !important;
+    min-width: 15vw !important;
+  }
+
+  .product-card, .result-item {
+    flex: 0 0 70vw !important;
+    width: 70vw !important;
+    min-width: 70vw !important;
+    scroll-snap-align: center;
+    border-radius: 28px;
+    margin: 0;
+  }
+
+  .product-thumb-vertical, .result-thumb-vertical {
+    padding: 0 !important; /* Mobile Full Fill */
+    max-height: 48vh !important;
+  }
+
+  .product-thumb-vertical img, .result-thumb-vertical img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .mobile-slide-indicator {
+    position: absolute;
+    bottom: 1.2rem;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+  }
+
+  .indicator-track {
+    width: 70vw;
+    height: 4px;
+    background: rgba(var(--color-primary-rgb), 0.1);
+    border-radius: 4px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .indicator-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), #818cf8);
+    border-radius: 4px;
+    position: absolute;
+    top: 0;
+    transition: left 0.1s linear;
   }
 }
 </style>
