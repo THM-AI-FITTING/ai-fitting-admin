@@ -23,6 +23,7 @@ interface PoseState {
   status: 'idle' | 'pending' | 'processing' | 'done' | 'error';
   requestId: string | null;
   resultUrl: string | null;
+  productImageKey: string | null;
 }
 
 const route = useRoute();
@@ -43,7 +44,29 @@ const isImageViewerOpen = ref(false);
 const isLoadingData = ref(true);
 const userIdValue = ref('-');
 const regDtm = ref('-');
-const statusValue = ref('-');
+
+// --- Toast Notification ---
+const toastVisible = ref(false);
+const toastMsg = ref('');
+let toastTimer: any = null;
+
+const showToast = (msg: string) => {
+  toastMsg.value = msg;
+  toastVisible.value = true;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false;
+  }, 3000);
+};
+
+const statusValue = computed(() => {
+  const statuses = poseStates.value.filter(p => p.requestId).map(p => p.status);
+  if (statuses.length === 0) return 'IDLE';
+  if (statuses.some(s => s === 'pending' || s === 'processing')) return 'PROCESSING';
+  if (statuses.every(s => s === 'done')) return 'DONE';
+  if (statuses.some(s => s === 'error')) return 'ERROR';
+  return 'IDLE';
+});
 
 const genderTabs = [
   { id: 'female', name: '여성' },
@@ -57,19 +80,19 @@ const productTypeOptions = [
   { label: '하의', value: 'bottom' }
 ];
 
-const poseStates = reactive<PoseState[]>([
-  { id: 'A', name: '여성 A', type: 'front', gender: 'female', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'B', name: '여성 B', type: 'front', gender: 'female', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'C', name: '여성 C', type: 'back', gender: 'female', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'D', name: '여성 D', type: 'back', gender: 'female', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'A', name: '남성 A', type: 'front', gender: 'male', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'B', name: '남성 B', type: 'front', gender: 'male', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'C', name: '남성 C', type: 'back', gender: 'male', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'D', name: '남성 D', type: 'back', gender: 'male', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'A', name: '마네킹 A', type: 'front', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'B', name: '마네킹 B', type: 'front', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'C', name: '마네킹 C', type: 'back', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null },
-  { id: 'D', name: '마네킹 D', type: 'back', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null },
+const poseStates = ref<PoseState[]>([
+  { id: 'A', name: '여성 A', type: 'front', gender: 'female', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'B', name: '여성 B', type: 'front', gender: 'female', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'C', name: '여성 C', type: 'back', gender: 'female', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'D', name: '여성 D', type: 'back', gender: 'female', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'A', name: '남성 A', type: 'front', gender: 'male', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'B', name: '남성 B', type: 'front', gender: 'male', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'C', name: '남성 C', type: 'back', gender: 'male', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'D', name: '남성 D', type: 'back', gender: 'male', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'A', name: '마네킹 A', type: 'front', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'B', name: '마네킹 B', type: 'front', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'C', name: '마네킹 C', type: 'back', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
+  { id: 'D', name: '마네킹 D', type: 'back', gender: 'mannequin', status: 'idle', requestId: null, resultUrl: null, productImageKey: null },
 ]);
 
 const selectedPoseIds = ref<string[]>([]);
@@ -78,29 +101,44 @@ const cumulativeHistory = ref<{poseId: string, gender: string, url: string, requ
 const logs = ref<any[]>([]);
 
 // --- Computed ---
-const filteredPoses = computed(() => poseStates.filter((p: PoseState) => p.gender === currentGender.value));
-const allGenerating = computed(() => poseStates.some((p: PoseState) => p.status === 'pending' || p.status === 'processing'));
+const filteredPoses = computed(() => poseStates.value.filter((p: PoseState) => p.gender === currentGender.value));
+const allGenerating = computed(() => poseStates.value.some((p: PoseState) => p.status === 'pending' || p.status === 'processing'));
 
 const displayImageUrl = computed(() => {
   if (viewingHistoryUrl.value) return viewingHistoryUrl.value;
+  
   const currentPose = filteredPoses.value.find((p: PoseState) => p.id === viewingPoseId.value);
-  return currentPose?.resultUrl || null;
+  if (currentPose?.resultUrl) return currentPose.resultUrl;
+  
+  // Fallback: If current job result is not yet available, show the latest from history for this pose
+  const results = cumulativeHistory.value
+    .filter(h => h.poseId === viewingPoseId.value && h.gender.toLowerCase() === currentGender.value.toLowerCase());
+  
+  if (results.length > 0) {
+    return results[results.length - 1].url;
+  }
+  
+  return null;
 });
 
 const historyList = computed(() => {
+  const curPose = filteredPoses.value.find(p => p.id === viewingPoseId.value);
   return cumulativeHistory.value
-    .filter((h: any) => h.poseId === viewingPoseId.value && h.gender === currentGender.value)
+    .filter((h: any) => h.poseId === viewingPoseId.value && h.gender.toLowerCase() === currentGender.value.toLowerCase())
     .map((h: any) => ({
       url: h.url,
       requestId: h.requestId,
-      current: viewingHistoryUrl.value ? viewingHistoryUrl.value === h.url : h.url === filteredPoses.value.find((p: PoseState) => p.id === h.poseId)?.resultUrl
+      current: viewingHistoryUrl.value ? viewingHistoryUrl.value === h.url : h.url === curPose?.resultUrl
     })).reverse();
 });
 
 const hasHistoryOrIsDone = (poseId: string) => {
-  const pose = poseStates.find((p: PoseState) => p.id === poseId && p.gender === currentGender.value);
-  if (pose?.status === 'done') return true;
-  return cumulativeHistory.value.some((h: any) => h.poseId === poseId && h.gender === currentGender.value);
+  const pose = filteredPoses.value.find(p => p.id === poseId);
+  if (pose?.status === 'done' || pose?.resultUrl) return true;
+  return cumulativeHistory.value.some(h => 
+    h.poseId === poseId && 
+    h.gender.toLowerCase() === currentGender.value.toLowerCase()
+  );
 };
 
 // --- Data Fetching ---
@@ -114,19 +152,15 @@ const loadJobData = async () => {
       logs.value = data.logs || [];
 
       if (jobList.length > 0) {
+        // Sort jobList chronologically to ensure latest job state wins
+        jobList.sort((a: any, b: any) => (a.sysRegDtm || '').localeCompare(b.sysRegDtm || ''));
+        
         const first = jobList[0];
-        currentGender.value = first.gender || 'female';
+        currentGender.value = (first.gender || 'female').toLowerCase();
         selectedProductType.value = first.productType || 'base';
         promptText.value = first.prompt || '';
         userIdValue.value = first.userId || '-';
         regDtm.value = first.sysRegDtm || '-';
-        
-        // Calculate group status
-        const statuses = jobList.map((j: any) => j.status?.toUpperCase());
-        if (statuses.some((s: string) => s === 'PROCESSING' || s === 'PENDING')) statusValue.value = 'PROCESSING';
-        else if (statuses.every((s: string) => s === 'SUCCESS' || s === 'DONE' || s === 'COMPLETED')) statusValue.value = 'DONE';
-        else if (statuses.some((s: string) => s === 'ERROR' || s === 'FAILED')) statusValue.value = 'ERROR';
-        else statusValue.value = statuses[0] || '-';
 
         // Set initial viewing pose if none selected
         if (!viewingPoseId.value && first.slot) {
@@ -135,20 +169,21 @@ const loadJobData = async () => {
 
         // Reconstruct pose states and history
         jobList.forEach((job: any) => {
-          // If job gender is null, default to the detected group gender
-          const jobGender = job.gender || currentGender.value;
-          const pose = poseStates.find((p: PoseState) => 
-            p.id === job.slot && 
-            p.gender.toLowerCase() === jobGender.toLowerCase()
+          const jobGender = (job.gender || currentGender.value).toLowerCase();
+          const jobSlot = (job.slot || '').toUpperCase();
+          
+          const idx = poseStates.value.findIndex((p: PoseState) => 
+            p.id.toUpperCase() === jobSlot && 
+            p.gender.toLowerCase() === jobGender
           );
           
-          // Populate input product images (move outside pose check to ensure visibility)
           if (job.productImageUrl) {
-            if (job.slot === 'A' || job.slot === 'B') topImage.value = job.productImageUrl;
-            if (job.slot === 'C' || job.slot === 'D') bottomImage.value = job.productImageUrl;
+            if (jobSlot === 'A' || jobSlot === 'B') topImage.value = job.productImageUrl;
+            if (jobSlot === 'C' || jobSlot === 'D') bottomImage.value = job.productImageUrl;
           }
 
-          if (pose) {
+          if (idx > -1) {
+            const pose = { ...poseStates.value[idx] };
             const s = job.status?.toLowerCase();
             if (s === 'success' || s === 'done' || s === 'completed') {
                pose.status = 'done';
@@ -159,6 +194,10 @@ const loadJobData = async () => {
             }
             pose.resultUrl = job.resultUrl;
             pose.requestId = job.requestId;
+            pose.productImageKey = job.productImageKey;
+            
+            // Update the state with a new object reference to ensure reactivity
+            poseStates.value[idx] = pose;
             
             if (job.resultUrl && !cumulativeHistory.value.find((h: any) => h.requestId === job.requestId)) {
               cumulativeHistory.value.push({
@@ -171,10 +210,18 @@ const loadJobData = async () => {
           }
         });
         
-        // Set initial view
-        const firstDone = poseStates.find((p: PoseState) => p.gender === currentGender.value && p.status === 'done');
-        if (firstDone) viewingPoseId.value = firstDone.id;
-        else if (filteredPoses.value.length > 0) viewingPoseId.value = filteredPoses.value[0].id;
+        // Finalize viewing state
+        const firstWithResult = poseStates.value.find(p => p.gender.toLowerCase() === currentGender.value.toLowerCase() && p.resultUrl);
+        if (firstWithResult) {
+           viewingPoseId.value = firstWithResult.id;
+        } else if (!viewingPoseId.value && filteredPoses.value.length > 0) {
+           viewingPoseId.value = filteredPoses.value[0].id;
+        }
+
+        // Auto-start polling if any job is still processing
+        if (allGenerating.value) {
+          startPolling();
+        }
       }
     }
   } catch (e) {
@@ -207,21 +254,33 @@ const startPolling = () => { if (!pollTimer) pollTimer = setInterval(fetchJobSta
 const stopPolling = () => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } };
 
 const fetchJobStatuses = async () => {
-  const pendingPoses = poseStates.filter((p: PoseState) => p.requestId && (p.status === 'pending' || p.status === 'processing'));
+  const pendingPoses = poseStates.value.filter((p: PoseState) => p.requestId && (p.status === 'pending' || p.status === 'processing'));
   if (pendingPoses.length === 0) return stopPolling();
 
   try {
     const res = await fetch(`${apiBase}/api/studio/jobs/${poseGroupId.value}`);
     if (res.ok) {
       const data = await res.json();
-      data.forEach((job: any) => {
-        const pose = poseStates.find((p: PoseState) => p.requestId === job.requestId);
-        if (pose) {
-          const s = job.status.toLowerCase();
-          if (s === 'success' || s === 'completed' || s === 'done') {
+      const jobList = data.jobs || [];
+      jobList.forEach((job: any) => {
+        // Try matching by requestId first, then slot+gender fallback
+        let idx = poseStates.value.findIndex((p: PoseState) => p.requestId === job.requestId);
+        if (idx === -1 && job.slot) {
+           const jobGender = (job.gender || currentGender.value).toLowerCase();
+           idx = poseStates.value.findIndex(p => p.id.toUpperCase() === job.slot.toUpperCase() && p.gender.toLowerCase() === jobGender);
+        }
+
+        if (idx > -1) {
+          const pose = { ...poseStates.value[idx] };
+          if (job.requestId) pose.requestId = job.requestId; // Update requestId if it was matched by slot
+          
+          const s = job.status.toUpperCase();
+          if (s === 'SUCCESS' || s === 'COMPLETED' || s === 'DONE') {
+            const wasDone = pose.status === 'done';
             pose.status = 'done';
             if (job.resultUrl) {
               pose.resultUrl = job.resultUrl;
+              
               if (!cumulativeHistory.value.find((h: any) => h.requestId === job.requestId)) {
                 cumulativeHistory.value.push({
                    poseId: pose.id,
@@ -230,13 +289,22 @@ const fetchJobStatuses = async () => {
                    requestId: job.requestId
                 });
               }
-              if (viewingPoseId.value === pose.id) viewingHistoryUrl.value = null;
+              // Switch view IF current view is empty or we just completed the one we were watching
+              if (!wasDone && (!displayImageUrl.value || viewingPoseId.value === pose.id)) {
+                 viewingPoseId.value = pose.id;
+                 viewingHistoryUrl.value = null;
+              }
+              if (!wasDone) {
+                showToast(`${pose.id} 포즈 이미지 생성이 완료되었습니다.`);
+              }
             }
-          } else if (s === 'error' || s === 'failed') {
+          } else if (s === 'ERROR' || s === 'FAILED' || s === 'BLOCKED') {
             pose.status = 'error';
           } else {
             pose.status = 'processing';
           }
+          // Reactive update
+          poseStates.value[idx] = { ...pose };
         }
       });
     }
@@ -245,16 +313,70 @@ const fetchJobStatuses = async () => {
 
 const generateAgain = async () => {
   if (selectedPoseIds.value.length === 0) return;
-  // Re-generation logic would typically need the original product image.
-  // Since we are in the detail view, we might not have the File object unless we re-upload.
-  // For now, we inform that re-generation from detail requires original image context or server-side reuse.
-  alert('상세보기에서의 재생성 기능은 현재 준비 중입니다. 업로드 페이지를 이용해 주세요.');
+  
+  for (const id of selectedPoseIds.value) {
+    const poseIdx = poseStates.value.findIndex(p => p.id === id && p.gender === currentGender.value);
+    if (poseIdx === -1) continue;
+
+    const pose = { ...poseStates.value[poseIdx] };
+
+    const formData = new FormData();
+    formData.append('poseGroupId', poseGroupId.value);
+    formData.append('slot', pose.id);
+    formData.append('gender', currentGender.value);
+    formData.append('productType', selectedProductType.value);
+    formData.append('prompt', promptText.value);
+    formData.append('userId', userIdValue.value);
+    
+    // Crucial: Use existing productImageKey
+    if (pose.productImageKey) {
+      formData.append('productImageKey', pose.productImageKey);
+    } else {
+      // Fallback if no key found for this slot, try to find ANY product image key for this group
+      const fallbackPose = poseStates.value.find(p => (p.id === 'A' || p.id === 'B') && p.productImageKey);
+      const fallbackKey = fallbackPose?.productImageKey;
+      if (fallbackKey) formData.append('productImageKey', fallbackKey);
+    }
+    
+    // personImageKey (reference image)
+    const typeStr = pose.type === 'front' ? 'front' : 'rear';
+    formData.append('personImageKey', `sample/${currentGender.value}-${selectedProductType.value}-${typeStr}_${pose.id.toLowerCase()}.jpg`);
+
+    pose.status = 'pending';
+    poseStates.value[poseIdx] = { ...pose }; // Reactive update
+    
+    // Ensure viewingPoseId is set to start watching this one
+    if (!viewingPoseId.value) viewingPoseId.value = id;
+
+    try {
+      const res = await fetch(`${apiBase}/api/studio/jobs`, { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        const updatedPose = { ...poseStates.value[poseIdx] };
+        updatedPose.requestId = data.requestId;
+        poseStates.value[poseIdx] = updatedPose;
+        startPolling();
+      } else {
+        const errorPose = { ...poseStates.value[poseIdx] };
+        errorPose.status = 'error';
+        poseStates.value[poseIdx] = errorPose;
+      }
+    } catch (e) {
+      console.error('Generation call failed:', e);
+      const errorPose = { ...poseStates.value[poseIdx] };
+      errorPose.status = 'error';
+      poseStates.value[poseIdx] = errorPose;
+    }
+  }
 };
 
 const formatDate = (dateStr: string) => {
   if (!dateStr || dateStr === '-') return '-';
   try {
-    const d = new Date(dateStr.replace(' ', 'T'));
+    // Handle both '2026-03-09 00:00:00' and '2026-03-09T00:00:00'
+    const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+    const d = new Date(normalized);
+    if (isNaN(d.getTime())) return dateStr;
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${d.getFullYear()}. ${pad(d.getMonth() + 1)}. ${pad(d.getDate())}. ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   } catch (e) {
@@ -359,7 +481,7 @@ definePageMeta({
           <div class="pose-grid-v2">
             <div 
               v-for="p in filteredPoses" 
-              :key="p.id" 
+              :key="currentGender + p.id" 
               class="pose-card-v2"
               :class="{ 
                 'active': selectedPoseIds.includes(p.id),
@@ -413,7 +535,7 @@ definePageMeta({
             <div class="pose-view-selector-v2">
               <button 
                 v-for="p in filteredPoses" 
-                :key="p.id"
+                :key="'view-' + currentGender + p.id"
                 class="view-tab"
                 :class="{ active: viewingPoseId === p.id }"
                 :disabled="!hasHistoryOrIsDone(p.id)"
@@ -434,7 +556,19 @@ definePageMeta({
                 <button class="hover-zoom-btn" @click="isImageViewerOpen = true">
                   <Search :size="18" />
                 </button>
+                <!-- Generating Indicator overlay on images -->
+                <div v-if="allGenerating" class="mini-generating-tag">
+                   <div class="small-pulse"></div>
+                   <span>생성 중...</span>
+                </div>
               </div>
+            </div>
+
+            <div v-else-if="allGenerating" class="empty-preview-v2">
+               <div class="loading-overlay">
+                  <div class="loader"></div>
+                  <p>AI가 이미지를 생성하고 있습니다...</p>
+               </div>
             </div>
 
             <div v-else class="empty-preview-v2">
@@ -470,6 +604,18 @@ definePageMeta({
         <button class="zoom-close-btn" @click="isImageViewerOpen = false"><X /></button>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <Teleport to="body">
+      <Transition name="toast">
+        <div v-if="toastVisible" class="modern-toast">
+          <div class="toast-icon">
+            <Check :size="16" />
+          </div>
+          <span class="toast-text">{{ toastMsg }}</span>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -567,6 +713,57 @@ definePageMeta({
 
 .preview-stage-v2 { flex: 1; display: flex; flex-direction: column; padding-top: 10px; min-height: 0; }
 .preview-card-v2 { width: 100%; flex: 1; background: #fff; border-radius: 20px; position: relative; display: flex; align-items: center; justify-content: center; z-index: 1; min-height: 0; }
+
+/* Toast Styles */
+.modern-toast {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(17, 17, 17, 0.85);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  min-width: 280px;
+}
+
+.toast-icon {
+  width: 28px;
+  height: 28px;
+  background: #10b981;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* Toast Transition */
+.toast-enter-active, .toast-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translate(-50%, -20px) scale(0.9);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -10px) scale(0.95);
+}
+
 .generating-vibe::before { content: ''; position: absolute; inset: -3px; background: linear-gradient(45deg, #ff4d4f, #5c7cfa, #00d2ff, #7e5bef, #ff4d4f); background-size: 400% 400%; z-index: -1; border-radius: 23px; animation: border-gradient-wave 3s ease infinite; filter: blur(2px); }
 .generating-vibe::after { content: ''; position: absolute; inset: 1px; background: #fff; z-index: -1; border-radius: 19px; }
 
@@ -603,4 +800,43 @@ definePageMeta({
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 .empty-preview-v2 { color: #ccc; text-align: center; }
+
+.mini-generating-tag {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.2);
+  z-index: 5;
+}
+
+.small-pulse {
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse-green 1.5s infinite;
+}
+
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes border-gradient-wave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 </style>

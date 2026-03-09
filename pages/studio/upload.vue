@@ -200,6 +200,18 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Toast Notification -->
+    <Teleport to="body">
+      <Transition name="toast">
+        <div v-if="toastVisible" class="modern-toast">
+          <div class="toast-icon">
+            <Check :size="16" />
+          </div>
+          <span class="toast-text">{{ toastMsg }}</span>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -253,6 +265,20 @@ const productTypeOptions = [
 ];
 
 const selectedProductType = ref('base');
+
+// --- Toast Notification ---
+const toastVisible = ref(false);
+const toastMsg = ref('');
+let toastTimer: any = null;
+
+const showToast = (msg: string) => {
+  toastMsg.value = msg;
+  toastVisible.value = true;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false;
+  }, 3000);
+};
 
 const alertModal = reactive({
   show: false,
@@ -395,7 +421,8 @@ const fetchJobStatuses = async () => {
   try {
     const res = await fetch(`${apiBase}/api/studio/jobs/${poseGroupId.value}`);
     if (res.ok) {
-      const jobs = await res.json();
+      const data = await res.json();
+      const jobs = data.jobs || [];
       jobs.forEach((job: any) => {
         const pose = poseStates.find(p => p.requestId === job.requestId);
         if (pose) {
@@ -404,15 +431,15 @@ const fetchJobStatuses = async () => {
             const wasNotDone = pose.status !== 'done';
             pose.status = 'done';
             
-            // On first transition to 'done' in this cycle, auto-switch to this pose if none switched yet
-            if (wasNotDone && !isFirstSuccessInCycle && job.resultUrl) {
-               isFirstSuccessInCycle = true;
-               // Wait for ui to update before switching
-               if (currentGender.value === pose.gender) {
-                 viewingPoseId.value = pose.id;
-                 viewingHistoryUrl.value = null; // show the newest layout
-               }
-            }
+             if (wasNotDone && !isFirstSuccessInCycle && job.resultUrl) {
+                isFirstSuccessInCycle = true;
+                showToast(`${pose.id} 포즈 이미지 생성이 완료되었습니다.`);
+                // Wait for ui to update before switching
+                if (currentGender.value === pose.gender) {
+                  viewingPoseId.value = pose.id;
+                  viewingHistoryUrl.value = null; // show the newest layout
+                }
+             }
 
             if (job.resultUrl) {
               pose.resultUrl = job.resultUrl;
@@ -811,8 +838,59 @@ onUnmounted(() => stopPolling());
 .alert-close-btn { width: 100%; height: 48px; background: #111; color: #fff; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; margin-top: 0.5rem; }
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes scaleUp { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.animate-scale-up { animation: scaleUp 0.4s ease-out; }
+@keyframes scale-up { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Toast Styles */
+.modern-toast {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(17, 17, 17, 0.85);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  min-width: 280px;
+}
+
+.toast-icon {
+  width: 28px;
+  height: 28px;
+  background: #10b981;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* Toast Transition */
+.toast-enter-active, .toast-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translate(-50%, -20px) scale(0.9);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -10px) scale(0.95);
+}
+
+.animate-scale-up { animation: scale-up 0.4s ease-out; }
 
 /* Image Viewer Modal CSS */
 .image-viewer-overlay {
