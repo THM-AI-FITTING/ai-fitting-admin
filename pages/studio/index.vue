@@ -143,7 +143,7 @@
                 </Transition>
               </div>
             </div>
-            <div class="item-name">{{ job.prompt || '설명 없음' }}</div>
+
             <div class="item-footer">
               <span class="item-date">{{ formatDate(job.createdAt) }}</span>
               <span class="item-poses">{{ job.slots?.length || 0 }} Poses</span>
@@ -153,7 +153,7 @@
       </div>
 
       <div v-if="hasMore" class="load-more">
-        <BaseButton variant="ghost" @click="pageSize += 15">더보기</BaseButton>
+        <BaseButton variant="ghost" @click="pageSize += 12">더보기</BaseButton>
       </div>
     </BaseCard>
 
@@ -191,7 +191,7 @@ const apiBase = config.public.apiBase;
 
 // States
 const viewMode = ref<'grid' | 'list'>('grid');
-const pageSize = ref(15);
+const pageSize = ref(12);
 const searchQuery = ref('');
 const filters = reactive({
   owner: '',
@@ -222,7 +222,7 @@ const visibleJobs = computed(() => jobs.value.slice(0, pageSize.value));
 const hasMore = computed(() => jobs.value.length > pageSize.value);
 
 const refresh = () => {
-  pageSize.value = 15;
+  pageSize.value = 12;
   selectedGroups.value = [];
   originalRefresh();
 };
@@ -296,7 +296,7 @@ const goToDetail = (job: any) => {
 .toggle-btn-modern { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: var(--color-text-muted); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
 .toggle-btn-modern.active { background: var(--color-primary); color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); }
 
-.studio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; padding: 1.5rem; }
+.studio-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.5rem; padding: 1.5rem; }
 .studio-item-card { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: var(--color-bg-surface); }
 .studio-item-card:hover { transform: translateY(-4px); border-color: var(--color-primary); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2); }
 .studio-item-card.selected { border-color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.05); }

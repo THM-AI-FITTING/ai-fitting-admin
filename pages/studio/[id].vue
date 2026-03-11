@@ -45,6 +45,74 @@ const isLoadingData = ref(true);
 const userIdValue = ref('-');
 const regDtm = ref('-');
 
+// --- Slider State ---
+const currentSlideIndex = ref(0);
+const slideContentRef = ref<HTMLElement | null>(null);
+
+// Dragging logic
+const isDragging = ref(false);
+const startX = ref(0);
+const dragOffset = ref(0);
+const isTransitioning = ref(true);
+
+const onDragStart = (e: MouseEvent) => {
+  if (historyList.value.length <= 1) return;
+  isDragging.value = true;
+  startX.value = e.pageX;
+  dragOffset.value = 0;
+  isTransitioning.value = false;
+};
+
+const onDragMove = (e: MouseEvent) => {
+  if (!isDragging.value) return;
+  const currentX = e.pageX;
+  dragOffset.value = currentX - startX.value;
+};
+
+const onDragEnd = () => {
+  if (!isDragging.value) return;
+  isDragging.value = false;
+  isTransitioning.value = true;
+
+  const threshold = 100;
+  if (dragOffset.value < -threshold && currentSlideIndex.value < historyList.value.length - 1) {
+    currentSlideIndex.value++;
+  } else if (dragOffset.value > threshold && currentSlideIndex.value > 0) {
+    currentSlideIndex.value--;
+  }
+  
+  dragOffset.value = 0;
+};
+
+// --- Computed ---
+const sliderTransform = computed(() => {
+  const itemWidth = 55; // Reduced from 85% to 55% for 50% peek
+  const gap = 2; 
+  const centerOffset = 22.5; // (100 - 55) / 2
+  
+  const baseTranslate = -currentSlideIndex.value * (itemWidth + gap) + centerOffset;
+  const dragTranslate = slideContentRef.value ? (dragOffset.value / slideContentRef.value.offsetWidth) * 100 : 0;
+  
+  return `translateX(${baseTranslate + dragTranslate}%)`;
+});
+
+watch(viewingPoseId, () => {
+  currentSlideIndex.value = 0;
+  viewingHistoryUrl.value = null;
+});
+
+const nextSlide = () => {
+  if (currentSlideIndex.value < historyList.value.length - 1) {
+    currentSlideIndex.value++;
+  }
+};
+
+const prevSlide = () => {
+  if (currentSlideIndex.value > 0) {
+    currentSlideIndex.value--;
+  }
+};
+
 // --- Toast Notification ---
 const toastVisible = ref(false);
 const toastMsg = ref('');
@@ -531,6 +599,7 @@ definePageMeta({
       <div class="main-layout-v2">
         <div class="preview-stage-v2">
           <div class="preview-card-v2 shadow-premium" :class="{ 'generating-vibe': allGenerating }">
+            <h3 class="section-title-v2 inside">가상 피팅 결과</h3>
             <!-- Inline Pose View Selector (Inside the card) -->
             <div class="pose-view-selector-v2">
               <button 
@@ -550,17 +619,55 @@ definePageMeta({
                <p>작업 데이터를 불러오는 중...</p>
             </div>
 
-            <div v-else-if="displayImageUrl" class="result-image-wrapper">
-              <div class="img-inner-wrap">
-                <img :src="displayImageUrl" class="result-img animate-scale-up" />
-                <button class="hover-zoom-btn" @click="isImageViewerOpen = true">
-                  <Search :size="18" />
-                </button>
-                <!-- Generating Indicator overlay on images -->
-                <div v-if="allGenerating" class="mini-generating-tag">
-                   <div class="small-pulse"></div>
-                   <span>생성 중...</span>
+            <div v-else-if="displayImageUrl || historyList.length > 0" class="result-image-wrapper">
+              <div 
+                ref="slideContentRef"
+                class="slider-container-v2"
+                :class="{ 'dragging': isDragging }"
+                @mousedown="onDragStart"
+                @mousemove="onDragMove"
+                @mouseup="onDragEnd"
+                @mouseleave="onDragEnd"
+              >
+                <div 
+                  class="slider-track-v2" 
+                  :style="{ 
+                    transform: sliderTransform,
+                    transition: isTransitioning ? 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
+                  }"
+                >
+                  <div v-for="(item, idx) in historyList" :key="idx" class="slide-item-v2">
+                    <div class="img-inner-wrap">
+                      <div class="img-relative-box">
+                        <img :src="item.url" class="result-img animate-scale-up" draggable="false" />
+                        <button class="hover-zoom-btn" @click.stop="viewingHistoryUrl = item.url; isImageViewerOpen = true">
+                          <Search :size="18" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                <!-- Slider Controls -->
+                <button v-if="currentSlideIndex > 0" class="slider-nav-btn prev" @click="prevSlide">
+                  <ChevronLeft :size="24" />
+                </button>
+                <button v-if="currentSlideIndex < historyList.length - 1" class="slider-nav-btn next" @click="nextSlide">
+                  <ChevronRight :size="24" />
+                </button>
+
+                <!-- Slider Pagination -->
+                <div v-if="historyList.length > 1" class="slider-pagination-v2">
+                  <span v-for="(_, idx) in historyList" :key="idx" 
+                        class="pagination-dot" :class="{ active: idx === currentSlideIndex }"
+                        @click="currentSlideIndex = idx"></span>
+                </div>
+              </div>
+
+              <!-- Generating Indicator overlay on images -->
+              <div v-if="allGenerating" class="mini-generating-tag">
+                <div class="small-pulse"></div>
+                <span>생성 중...</span>
               </div>
             </div>
 
@@ -579,21 +686,6 @@ definePageMeta({
           </div>
         </div>
 
-        <!-- History Gallery -->
-        <div class="results-gallery-v2 shadow-premium">
-          <div class="gallery-scroller-v2" :class="{ 'centered': historyList.length === 0 }">
-            <div v-for="(item, idx) in historyList" :key="idx" 
-                 class="gallery-item-v2" 
-                 :class="{ active: item.current }" 
-                 @click="viewingHistoryUrl = item.url">
-              <img :src="item.url" />
-              <div v-if="item.current" class="latest-dot"></div>
-            </div>
-            <div v-if="historyList.length === 0" class="empty-gallery-msg">
-              이 포즈의 생성 내역이 없습니다.
-            </div>
-          </div>
-        </div>
       </div>
     </main>
 
@@ -711,8 +803,47 @@ definePageMeta({
 .studio-main-v2 { flex: 1; padding: 0 1.5rem; display: flex; flex-direction: column; overflow: hidden; }
 .main-layout-v2 { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 1200px; margin: 0 auto; height: 100%; }
 
-.preview-stage-v2 { flex: 1; display: flex; flex-direction: column; padding-top: 10px; min-height: 0; }
-.preview-card-v2 { width: 100%; flex: 1; background: #fff; border-radius: 20px; position: relative; display: flex; align-items: center; justify-content: center; z-index: 1; min-height: 0; }
+.preview-card-v2 { 
+  width: 100%; 
+  flex: 1; 
+  background: #fff; 
+  border-radius: 24px; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+  z-index: 1; 
+  min-height: 0; 
+}
+
+/* Slider Header */
+.slider-header-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.section-title-v2.inside {
+  position: static !important;
+  margin: 0 !important;
+  font-size: 1.1rem;
+}
+
+.pose-view-selector-v2 {
+  position: static !important;
+  display: flex !important;
+  background: #f1f3f5 !important;
+  padding: 4px !important;
+  border-radius: 12px !important;
+  gap: 4px !important;
+  border: 1px solid #e9ecef !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
 
 /* Toast Styles */
 .modern-toast {
@@ -772,22 +903,101 @@ definePageMeta({
 .view-tab.active { background: #111; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 .view-tab:disabled { opacity: 0.3; cursor: not-allowed; }
 
-.result-image-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem; box-sizing: border-box; }
-.img-inner-wrap { position: relative; height: 100%; }
+.result-image-wrapper { width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; padding: 1.5rem 0; box-sizing: border-box; overflow: hidden; }
+.img-inner-wrap { position: relative; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
+.img-relative-box { position: relative; height: 100%; display: flex; align-items: center; justify-content: center; }
 .result-img { height: 100%; width: auto; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-.hover-zoom-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-
-.results-gallery-v2 { height: 180px; background: #fff; border-radius: 20px; padding: 1rem; margin-bottom: 1.5rem; }
-.gallery-scroller-v2 { height: 100%; display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
-.gallery-item-v2 { flex-shrink: 0; width: 110px; height: 100%; border-radius: 12px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; position: relative; }
-.gallery-item-v2.active { border-color: #5c7cfa; }
-.gallery-item-v2 img { width: 100%; height: 100%; object-fit: cover; }
-.latest-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; border: 2px solid #fff; }
-.gallery-scroller-v2.centered { justify-content: center; align-items: center; }
-.empty-gallery-msg { color: #888; font-size: 0.9rem; font-weight: 600; width: 100%; text-align: center; }
+.hover-zoom-btn { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.9); border: 1px solid #eee; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 20; }
 
 .shadow-premium {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Slider Styles */
+.slider-container-v2 {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.slider-container-v2.dragging {
+  cursor: grabbing;
+}
+
+.slider-track-v2 {
+  display: flex;
+  height: 100%;
+  gap: 2%;
+  will-change: transform;
+}
+
+.slide-item-v2 {
+  flex: 0 0 55%;
+  width: 55%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slider-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #eee;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.slider-nav-btn:hover {
+  background: #111;
+  color: #fff;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.slider-nav-btn.prev { left: 1.5rem; }
+.slider-nav-btn.next { right: 1.5rem; }
+
+.slider-pagination-v2 {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.pagination-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination-dot.active {
+  background: #fff;
+  transform: scale(1.2);
 }
 
 .image-zoom-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; align-items: center; justify-content: center; }
