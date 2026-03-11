@@ -3,55 +3,6 @@
     <div class="page-controls animate-fade-in stagger-1">
       <div class="filter-panel glass-panel">
         <div class="filter-grid">
-          <BaseInput 
-            v-model="filters.owner" 
-            placeholder="파트너명..." 
-            class="filter-input-sm"
-          />
-          <BaseInput 
-            v-model="filters.userId" 
-            placeholder="사용자 ID..." 
-            class="filter-input-sm"
-          />
-          <select v-model="filters.status" class="filter-select">
-            <option value="">모든 상태</option>
-            <option value="DONE">완료 (DONE)</option>
-            <option value="PROCESSING">진행 중 (PROCESSING)</option>
-          </select>
-          
-          <BaseInput 
-            v-model="searchQuery" 
-            placeholder="상품명 검색..." 
-            class="filter-input"
-          />
-        </div>
-        <div class="filter-actions">
-          <Transition name="fade-slide">
-            <BaseButton 
-              v-if="selectedGroups.length > 0"
-              variant="danger" 
-              size="sm" 
-              class="delete-btn"
-              :loading="deleting"
-              @click="deleteSelectedGroups"
-            >
-              <Trash2 :size="16" />
-              {{ selectedGroups.length }}개 삭제
-            </BaseButton>
-          </Transition>
-          <BaseButton variant="primary" @click="refresh()">새로고침</BaseButton>
-          <BaseButton variant="primary" @click="router.push('/studio/upload')">
-            <Sparkles :size="18" />
-            새 작업
-          </BaseButton>
-        </div>
-      </div>
-    </div>
-
-    <BaseCard class="animate-fade-in stagger-2">
-      <template #header>
-        <div class="card-header-actions">
-          <span class="card-header-title">스튜디오 작업 내역</span>
           <div class="view-toggles-integrated">
             <button 
               :class="['toggle-btn-modern', { active: viewMode === 'grid' }]"
@@ -68,8 +19,53 @@
               <ListIcon :size="18" />
             </button>
           </div>
+          <BaseInput 
+            v-model="filters.owner" 
+            placeholder="파트너명..." 
+            class="filter-input-sm"
+          />
+          <BaseInput 
+            v-model="filters.userId" 
+            placeholder="사용자 ID..." 
+            class="filter-input-sm"
+          />
+          <select v-model="filters.status" class="filter-select">
+            <option value="">모든 상태</option>
+            <option value="DONE">완료 (DONE)</option>
+            <option value="PROCESSING">진행 중 (PROCESSING)</option>
+            <option value="FAILED">실패 (FAILED)</option>
+          </select>
+          <select v-model="sortOrder" class="filter-select">
+            <option value="desc">최신순</option>
+            <option value="asc">등록순</option>
+          </select>
         </div>
-      </template>
+        <div class="filter-actions">
+          <Transition name="fade-slide">
+            <BaseButton 
+              v-if="selectedGroups.length > 0"
+              variant="danger" 
+              class="delete-btn"
+              :loading="deleting"
+              @click="deleteSelectedGroups"
+            >
+              <Trash2 :size="18" />
+              {{ selectedGroups.length }}개 삭제
+            </BaseButton>
+          </Transition>
+          <BaseButton variant="ghost" @click="refresh()" title="새로고침">
+            <RefreshCw :size="18" :class="{ 'spin': pending }" />
+          </BaseButton>
+          <BaseButton variant="primary" @click="router.push('/studio/upload')">
+            <Sparkles :size="18" />
+            새 작업
+          </BaseButton>
+        </div>
+      </div>
+    </div>
+
+    <BaseCard class="animate-fade-in stagger-2">
+
 
       <div v-if="pending && !jobs.length" class="loading-state">
         <div class="loader"></div>
@@ -135,15 +131,6 @@
             </div>
           </div>
           <div class="item-info">
-            <div class="requestId-row">
-              <div class="copy-container">
-                <span class="mono text-truncate clickable" @click.stop="copyToClipboard(job.poseGroupId)">{{ job.poseGroupId.split('-')[0] }}</span>
-                <Transition name="fade-up">
-                  <div v-if="activeTooltipId === job.poseGroupId" class="copy-tooltip">복사 완료!</div>
-                </Transition>
-              </div>
-            </div>
-
             <div class="item-footer">
               <span class="item-date">{{ formatDate(job.createdAt) }}</span>
               <span class="item-poses">{{ job.slots?.length || 0 }} Poses</span>
@@ -192,7 +179,7 @@ const apiBase = config.public.apiBase;
 // States
 const viewMode = ref<'grid' | 'list'>('grid');
 const pageSize = ref(12);
-const searchQuery = ref('');
+const sortOrder = ref('desc');
 const filters = reactive({
   owner: '',
   userId: '',
@@ -205,17 +192,16 @@ const jobs = computed(() => {
   if (!rawJobs.value) return [];
   let list = [...rawJobs.value];
   
-  // Apply Search
-  if (searchQuery.value) {
-    list = list.filter(j => j.prompt?.toLowerCase().includes(searchQuery.value.toLowerCase()));
-  }
-  
   // Apply Filters
   if (filters.owner) list = list.filter(j => j.owner?.includes(filters.owner));
   if (filters.userId) list = list.filter(j => j.userId?.includes(filters.userId));
   if (filters.status) list = list.filter(j => j.status === filters.status);
-  
-  return list.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // Apply Sort
+  return list.sort((a,b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return sortOrder.value === 'desc' ? dateB - dateA : dateA - dateB;
+  });
 });
 
 const visibleJobs = computed(() => jobs.value.slice(0, pageSize.value));
@@ -244,9 +230,11 @@ const deleteSelectedGroups = async () => {
     for (const group of selectedGroups.value) {
       await $fetch(`${apiBase}/api/studio/groups/${group.poseGroupId}`, { method: 'DELETE' });
     }
-    alert('삭제되었습니다.');
+    alert('삭제가 완료되었습니다.');
+    selectedGroups.value = [];
     refresh();
   } catch (e) {
+    console.error('삭제 오류:', e);
     alert('삭제 중 오류가 발생했습니다.');
   } finally {
     deleting.value = false;
@@ -305,12 +293,9 @@ const goToDetail = (job: any) => {
 .grid-thumb { width: 100%; height: 100%; object-fit: cover; }
 .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #ccc; }
 .item-status { position: absolute; bottom: 8px; right: 8px; }
-.thumb-checkbox { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.8); border-radius: 4px; padding: 2px; }
+.thumb-checkbox { position: absolute; top: 8px; right: 8px; border-radius: 4px; padding: 2px; }
 
 .item-info { padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
-.requestId-row { display: flex; align-items: center; gap: 0.5rem; }
-.copy-container { position: relative; flex: 1; min-width: 0; }
-.mono { color: var(--color-primary); font-weight: 700; font-size: 0.85rem; }
 .item-name { font-weight: 600; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-footer { display: flex; justify-content: space-between; font-size: 0.75rem; color: #888; margin-top: 4px; }
 
@@ -325,7 +310,10 @@ const goToDetail = (job: any) => {
 .preview-content img { max-width: 100%; max-height: 85vh; border-radius: 8px; display: block; }
 .close-preview { position: absolute; top: -40px; right: 0; color: #fff; }
 
-.copy-tooltip { position: absolute; top: -30px; left: 0; background: var(--color-primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; white-space: nowrap; z-index: 10; }
-
 .filter-select { background: #fff; border: 1px solid var(--color-border); border-radius: 8px; padding: 0 10px; height: 40px; font-size: 0.9rem; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 </style>

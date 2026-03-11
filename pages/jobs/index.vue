@@ -7,6 +7,22 @@
     <div class="page-controls animate-fade-in stagger-1">
       <div class="filter-panel glass-panel">
         <div class="filter-grid">
+          <div class="view-toggles-integrated">
+            <button 
+              :class="['toggle-btn-modern', { active: viewMode === 'grid' }]"
+              @click="viewMode = 'grid'"
+              title="그리드 보기"
+            >
+              <LayoutGrid :size="18" />
+            </button>
+            <button 
+              :class="['toggle-btn-modern', { active: viewMode === 'list' }]"
+              @click="viewMode = 'list'"
+              title="목록 보기"
+            >
+              <ListIcon :size="18" />
+            </button>
+          </div>
           <BaseInput 
             v-model="filters.owner" 
             placeholder="파트너명..." 
@@ -50,27 +66,7 @@
     </div>
 
     <BaseCard class="animate-fade-in stagger-2">
-      <template #header>
-        <div class="card-header-actions">
-          <span class="card-header-title">작업 내역</span>
-          <div class="view-toggles-integrated">
-            <button 
-              :class="['toggle-btn-modern', { active: viewMode === 'grid' }]"
-              @click="viewMode = 'grid'"
-              title="그리드 보기"
-            >
-              <LayoutGrid :size="18" />
-            </button>
-            <button 
-              :class="['toggle-btn-modern', { active: viewMode === 'list' }]"
-              @click="viewMode = 'list'"
-              title="목록 보기"
-            >
-              <ListIcon :size="18" />
-            </button>
-          </div>
-        </div>
-      </template>
+
       <!-- List View -->
       <BaseTable 
         v-if="viewMode === 'list'"
@@ -209,7 +205,7 @@ definePageMeta({
 });
 
 const config = useRuntimeConfig();
-const { data: jobs, pending, refresh: originalRefresh } = await useFetch(`${config.public.apiBase}/api/jobs`, {
+const { data: jobs, pending, refresh: originalRefresh } = await useFetch<any[]>(`${config.public.apiBase}/api/jobs`, {
   query: filters
 });
 

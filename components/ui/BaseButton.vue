@@ -13,6 +13,7 @@
     ]"
     :disabled="disabled || loading"
     v-bind="$attrs"
+    @click="$emit('click', $event)"
   >
     <span v-if="loading" class="spinner"></span>
     <span v-else class="content">
@@ -28,6 +29,8 @@ import type { Component } from 'vue';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
+
+const emit = defineEmits(['click']);
 
 const props = withDefaults(defineProps<{
   variant?: ButtonVariant;

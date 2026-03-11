@@ -53,15 +53,19 @@ const menuGroups = computed(() => [
     title: '기본 기능',
     items: [
       { name: '대시보드', href: '/', icon: LayoutDashboard, active: route.path === '/' },
-      { name: 'API 키 관리', href: '/api-keys', icon: Key, active: route.path === '/api-keys' },
-      { name: 'AI 가상 피팅 목록', href: '/jobs', icon: List, active: route.path.startsWith('/jobs') || route.path.startsWith('/images') },
+      { name: 'API 키 관리', href: '/api-keys', icon: Key, active: route.path === '/api-keys' }
+    ]
+  },
+  {
+    title: '가상피팅',
+    items: [
+      { name: 'AI 가상 피팅', href: '/jobs', icon: List, active: route.path.startsWith('/jobs') || route.path.startsWith('/images') }
     ]
   },
   {
     title: 'AI 스튜디오',
     items: [
-      { name: '스튜디오 업로드', href: '/studio/upload', icon: Camera, active: route.path === '/studio/upload' },
-      { name: '스튜디오 작업 목록', href: '/studio', icon: Layers, active: route.path === '/studio' || (route.path.startsWith('/studio/') && route.path !== '/studio/upload') },
+      { name: 'AI 스튜디오', href: '/studio', icon: Layers, active: route.path.startsWith('/studio') },
     ]
   }
 ]);

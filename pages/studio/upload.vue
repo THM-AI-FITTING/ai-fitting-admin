@@ -4,6 +4,20 @@
     <!-- Left Sidebar: Controls -->
     <div class="studio-sidebar-v2">
       <div class="sidebar-content-v2">
+        <!-- Basic Info (Only in Detail Mode) -->
+        <section v-if="isDetailMode" class="control-group metadata-group">
+          <div class="metadata-grid">
+            <div class="meta-item">
+              <span class="meta-label">사용자 ID</span>
+              <span class="meta-value">{{ metadata.userId }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">생성일</span>
+              <span class="meta-value">{{ formatDate(metadata.regDtm) }}</span>
+            </div>
+          </div>
+        </section>
+
         <!-- Clothing Upload Row (Top & Bottom) -->
         <section class="control-group">
           <div class="group-header">
@@ -12,12 +26,12 @@
           
           <div class="upload-slots-row">
             <!-- Top Upload -->
-            <div class="upload-area-v2" @click="topImage ? null : topInput?.click()">
+            <div class="upload-area-v2" :class="{ 'is-disabled': allGenerating }" @click="(topImage || allGenerating) ? null : topInput?.click()">
               <input type="file" ref="topInput" hidden accept="image/*" @change="handleFileUpload($event, 'top')">
               <template v-if="topImage">
                 <div class="image-preview-v2">
                   <img :src="topImage" class="preview-img" />
-                  <button class="remove-btn-v2" @click.stop="removeImage('top')"><X :size="14" /></button>
+                  <button v-if="!allGenerating" class="remove-btn-v2" @click.stop="removeImage('top')"><X :size="14" /></button>
                 </div>
               </template>
               <div v-else class="upload-placeholder-v2">
@@ -27,12 +41,12 @@
             </div>
 
             <!-- Bottom Upload -->
-            <div class="upload-area-v2" @click="bottomImage ? null : bottomInput?.click()">
+            <div class="upload-area-v2" :class="{ 'is-disabled': allGenerating }" @click="(bottomImage || allGenerating) ? null : bottomInput?.click()">
               <input type="file" ref="bottomInput" hidden accept="image/*" @change="handleFileUpload($event, 'bottom')">
               <template v-if="bottomImage">
                 <div class="image-preview-v2">
                   <img :src="bottomImage" class="preview-img" />
-                  <button class="remove-btn-v2" @click.stop="removeImage('bottom')"><X :size="14" /></button>
+                  <button v-if="!allGenerating" class="remove-btn-v2" @click.stop="removeImage('bottom')"><X :size="14" /></button>
                 </div>
               </template>
               <div v-else class="upload-placeholder-v2">
@@ -61,9 +75,10 @@
             </div>
           </div>
 
-          <div class="pose-tabs-v2">
+          <div class="pose-tabs-v2" :class="{ 'is-disabled': allGenerating }">
             <button v-for="t in genderTabs" :key="t.id"
                     class="pose-tab" :class="{ active: currentGender === t.id }"
+                    :disabled="allGenerating"
                     @click="currentGender = t.id">
               {{ t.name }}
             </button>
@@ -76,13 +91,17 @@
               class="pose-card-v2"
               :class="{ 
                 'active': selectedPoseIds.includes(p.id),
-                'disabled-card': !isPoseClickable(p.type)
+                'disabled-card': !isPoseClickable(p.type) || allGenerating
               }"
-              @click="isPoseClickable(p.type) ? togglePoseSelection(p.id) : null"
+              @click="(isPoseClickable(p.type) && !allGenerating) ? togglePoseSelection(p.id) : null"
             >
               <div class="pose-thumb-v2">
                 <img :src="p.customPersonUrl || getSampleImageUrl(p.id)" :alt="p.name" />
-                <button class="model-change-btn" @click.stop="modalActivePoseId = p.id; isCustomModelModalOpen = true">
+                <button 
+                  class="model-change-btn" 
+                  :disabled="allGenerating"
+                  @click.stop="modalActivePoseId = p.id; isCustomModelModalOpen = true"
+                >
                   <span>모델 변경</span>
                 </button>
                 <div v-if="p.status === 'processing' || p.status === 'pending'" class="pose-loading-overlay">
@@ -324,10 +343,13 @@ import {
   Upload, X, Sparkles, Download, History, ChevronRight, 
   ChevronLeft, ChevronDown, Check, AlertCircle, ImageIcon, Search, Wand2, Maximize2
 } from 'lucide-vue-next';
-import { useRuntimeConfig, useCookie } from '#app';
+import { useRuntimeConfig, useCookie, useRoute, useHead } from '#app';
 
-definePageMeta({ title: 'AI 스튜디오' });
+definePageMeta({ 
+  title: '스튜디오 가상피팅 생성' // Default title
+});
 
+const route = useRoute();
 const config = useRuntimeConfig();
 const apiBase = config.public.apiBase;
 const ownerCookie = useCookie('ai_admin_owner');
@@ -341,8 +363,28 @@ const poseGroupId = ref(crypto.randomUUID());
 const topImage = ref<string | null>(null);
 const bottomImage = ref<string | null>(null);
 const selectedFiles = reactive<{ top: File | null, bottom: File | null }>({ top: null, bottom: null });
+const productImageKeys = reactive<{ top: string | null, bottom: string | null }>({ top: null, bottom: null });
+
+// --- Detail Mode State ---
+const groupId = computed(() => route.query.groupId as string);
+const isDetailMode = computed(() => !!groupId.value);
+const isLoadingData = ref(false);
+const metadata = reactive({
+  userId: '-',
+  regDtm: '-',
+  status: 'IDLE'
+});
 
 const selectedPoseIds = ref<string[]>([]);
+
+// --- Dynamic Page Title ---
+watch(isDetailMode, (val) => {
+  route.meta.title = val ? '스튜디오 가상피팅 작업 상세' : '스튜디오 가상피팅 생성';
+}, { immediate: true });
+
+useHead({
+  title: computed(() => isDetailMode.value ? '스튜디오 가상피팅 작업 상세' : '스튜디오 가상피팅 생성')
+});
 const viewingPoseId = ref('A');
 const viewingHistoryUrl = ref<string | null>(null);
 const isImageViewerOpen = ref(false);
@@ -371,9 +413,9 @@ const activePoseHistory = computed(() => {
   };
 
   const history = cumulativeHistory.value
-    .filter(h => h.poseId === modalActivePoseId.value && h.gender === currentGender.value)
+    .filter(h => h.poseId === modalActivePoseId.value) // Removed gender filter
     .map((h, idx) => ({
-      name: `생성 결과 ${idx + 1}`,
+      name: `${h.gender === 'female' ? '여성' : h.gender === 'male' ? '남성' : '마네킹'} 생성 결과 ${idx + 1}`,
       url: h.url,
       isDefault: false,
       isNew: false
@@ -591,7 +633,7 @@ const selectedPose = computed(() => filteredPoses.value.find(p => p.id === viewi
 
 const historyList = computed(() => {
   const list = cumulativeHistory.value
-    .filter(h => h.poseId === viewingPoseId.value && h.gender === currentGender.value)
+    .filter(h => h.poseId === viewingPoseId.value) // Removed gender filter
     .map(h => ({ 
       url: h.url, 
       status: 'done' as JobStatus,
@@ -631,14 +673,14 @@ const isPoseClickable = (poseType: 'front' | 'back') => {
 const hasHistoryOrIsDone = (poseId: string) => {
   const pose = filteredPoses.value.find(p => p.id === poseId);
   if (pose?.status === 'done' || pose?.resultUrl) return true;
-  return cumulativeHistory.value.some(h => h.poseId === poseId && h.gender === currentGender.value);
+  return cumulativeHistory.value.some(h => h.poseId === poseId); // Removed gender filter
 };
 
 // --- Watchers ---
 watch(currentGender, () => {
-  const firstPose = filteredPoses.value[0];
+  // const firstPose = filteredPoses.value[0];
   selectedPoseIds.value = [];
-  viewingPoseId.value = firstPose.id;
+  // viewingPoseId.value = firstPose.id; // Keep viewingPoseId to prevent jumping
   viewingHistoryUrl.value = null;
 });
 
@@ -705,13 +747,6 @@ const setAsBaseImage = (url: string) => {
   if (pose) {
     pose.customPersonUrl = url;
     showToast(`${pose.id} 포즈의 베이스 사진으로 설정되었습니다.`);
-    
-    // 의상 사진 초기화
-    topImage.value = null;
-    bottomImage.value = null;
-    selectedFiles.top = null;
-    selectedFiles.bottom = null;
-    selectedPoseIds.value = [];
   }
 };
 
@@ -721,13 +756,6 @@ const selectCustomModel = (url: string) => {
     pose.customPersonUrl = url;
     isCustomModelModalOpen.value = false;
     showToast(`${pose.id} 포즈 모델이 변경되었습니다.`);
-
-    // 의상 사진 초기화
-    topImage.value = null;
-    bottomImage.value = null;
-    selectedFiles.top = null;
-    selectedFiles.bottom = null;
-    selectedPoseIds.value = [];
   }
 };
 
@@ -752,6 +780,102 @@ const extractS3Key = (url: string | null) => {
     return url;
   }
 };
+
+// --- Data Fetching (Detail Mode) ---
+const loadJobData = async () => {
+  if (!isDetailMode.value) return;
+  
+  try {
+    isLoadingData.value = true;
+    const res = await fetch(`${apiBase}/api/studio/jobs/${groupId.value}`);
+    if (res.ok) {
+      const data = await res.json();
+      const jobList = data.jobs || [];
+      
+      if (jobList.length > 0) {
+        // Sort chronologically
+        jobList.sort((a: any, b: any) => (a.sysRegDtm || '').localeCompare(b.sysRegDtm || ''));
+        
+        const first = jobList[0];
+        poseGroupId.value = groupId.value as any;
+        currentGender.value = (first.gender || 'female').toLowerCase();
+        selectedProductType.value = first.productType || 'base';
+        promptText.value = first.prompt || '';
+        metadata.userId = first.userId || '-';
+        metadata.regDtm = first.sysRegDtm || '-';
+
+        jobList.forEach((job: any) => {
+          const jobGender = (job.gender || currentGender.value).toLowerCase();
+          const jobSlot = (job.slot || '').toUpperCase();
+          
+          if (job.productImageUrl) {
+            if (jobSlot === 'A' || jobSlot === 'B') {
+              topImage.value = job.productImageUrl;
+              productImageKeys.top = job.productImageKey;
+            }
+            if (jobSlot === 'C' || jobSlot === 'D') {
+              bottomImage.value = job.productImageUrl;
+              productImageKeys.bottom = job.productImageKey;
+            }
+          }
+
+          const idx = poseStates.findIndex(p => p.id.toUpperCase() === jobSlot && p.gender.toLowerCase() === jobGender);
+          if (idx > -1) {
+            const pose = poseStates[idx];
+            const s = job.status?.toLowerCase();
+            if (s === 'success' || s === 'done' || s === 'completed') {
+              pose.status = 'done';
+            } else if (s === 'error' || s === 'failed' || s === 'blocked') {
+              pose.status = 'error';
+            } else {
+              pose.status = 'processing';
+            }
+            pose.resultUrl = job.resultUrl;
+            pose.requestId = job.requestId;
+            
+            if (job.resultUrl && !cumulativeHistory.value.find(h => h.requestId === job.requestId)) {
+              cumulativeHistory.value.push({
+                poseId: pose.id,
+                gender: pose.gender,
+                url: job.resultUrl,
+                requestId: job.requestId
+              });
+            }
+          }
+        });
+
+        // Set initial viewing pose
+        const firstWithResult = poseStates.find(p => p.gender === currentGender.value && p.resultUrl);
+        if (firstWithResult) {
+          viewingPoseId.value = firstWithResult.id;
+        }
+
+        if (allGenerating.value) startPolling();
+      }
+    }
+  } catch (e) {
+    console.error('[Studio] Failed to load job data:', e);
+  } finally {
+    isLoadingData.value = false;
+  }
+};
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr || dateStr === '-') return '-';
+  try {
+    const normalized = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+    const d = new Date(normalized);
+    if (isNaN(d.getTime())) return dateStr;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}. ${pad(d.getMonth() + 1)}. ${pad(d.getDate())}. ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  } catch (e) { return dateStr; }
+};
+
+onMounted(() => {
+  if (isDetailMode.value) {
+    loadJobData();
+  }
+});
 
 // --- API Logic ---
 let pollTimer: any = null;
@@ -824,31 +948,80 @@ const fetchJobStatuses = async () => {
 };
 
 const generateAllPoses = async () => {
-  const activeFile = selectedFiles.top || selectedFiles.bottom;
-  if (selectedPoseIds.value.length === 0 || !activeFile) return;
-  poseGroupId.value = crypto.randomUUID();
+  const hasFile = selectedFiles.top || selectedFiles.bottom;
+  const hasKey = productImageKeys.top || productImageKeys.bottom;
+  
+  if (selectedPoseIds.value.length === 0 || (!hasFile && !hasKey)) {
+    showToast('분석할 의류 이미지와 포즈를 선택해주세요.');
+    return;
+  }
+
+  // If not in detail mode OR if a new file is uploaded, we generate a new group ID
+  if (!isDetailMode.value || hasFile) {
+    poseGroupId.value = crypto.randomUUID();
+  }
+
   for (const id of selectedPoseIds.value) {
     const pose = filteredPoses.value.find(p => p.id === id);
     if (!pose) continue;
-    pose.retryCount = 0; // Reset retry count for new request
-    await executeJobRequest(pose, activeFile);
+    pose.retryCount = 0; 
+    
+    // Determine which file or key to use for this pose
+    let fileToUse: File | null = null;
+    let keyToUse: string | null = null;
+    
+    if (pose.type === 'front') {
+      fileToUse = selectedFiles.top;
+      keyToUse = productImageKeys.top;
+    } else {
+      fileToUse = selectedFiles.bottom;
+      keyToUse = productImageKeys.bottom;
+    }
+    
+    // Fallback logic if specific one isn't available
+    if (!fileToUse && !keyToUse) {
+      fileToUse = selectedFiles.top || selectedFiles.bottom;
+      keyToUse = productImageKeys.top || productImageKeys.bottom;
+    }
+
+    await executeJobRequest(pose, fileToUse, keyToUse);
   }
 };
 
 const retrySinglePose = async (pose: PoseState) => {
-  const activeFile = selectedFiles.top || selectedFiles.bottom;
-  if (!activeFile) return;
-  await executeJobRequest(pose, activeFile);
+  let fileToUse: File | null = null;
+  let keyToUse: string | null = null;
+  
+  if (pose.type === 'front') {
+    fileToUse = selectedFiles.top;
+    keyToUse = productImageKeys.top;
+  } else {
+    fileToUse = selectedFiles.bottom;
+    keyToUse = productImageKeys.bottom;
+  }
+  
+  if (!fileToUse && !keyToUse) {
+    fileToUse = selectedFiles.top || selectedFiles.bottom;
+    keyToUse = productImageKeys.top || productImageKeys.bottom;
+  }
+
+  await executeJobRequest(pose, fileToUse, keyToUse);
 };
 
-const executeJobRequest = async (pose: PoseState, activeFile: File) => {
+const executeJobRequest = async (pose: PoseState, fileToUse: File | null, keyToUse: string | null) => {
   pose.status = 'pending';
   const formData = new FormData();
   formData.append('poseGroupId', poseGroupId.value);
   formData.append('slot', pose.id);
   formData.append('gender', currentGender.value);
   formData.append('productType', selectedProductType.value);
-  formData.append('product', activeFile);
+  
+  if (fileToUse) {
+    formData.append('product', fileToUse);
+  } else if (keyToUse) {
+    formData.append('productImageKey', keyToUse);
+  }
+
   formData.append('personImageKey', extractS3Key(pose.customPersonUrl) || `sample/${currentGender.value}-${selectedProductType.value}-${pose.type === 'front' ? 'front' : 'rear'}_${pose.id.toLowerCase()}.jpg`);
   formData.append('prompt', promptText.value);
   formData.append('userId', currentUserId.value);
@@ -864,7 +1037,7 @@ const executeJobRequest = async (pose: PoseState, activeFile: File) => {
     } else {
       if (pose.retryCount < 1) {
         pose.retryCount++;
-        executeJobRequest(pose, activeFile);
+        executeJobRequest(pose, fileToUse, keyToUse);
       } else {
         pose.status = 'error';
         showToast(`${pose.id} 포즈 이미지 생성에 실패했습니다.`);
@@ -873,7 +1046,7 @@ const executeJobRequest = async (pose: PoseState, activeFile: File) => {
   } catch (e) {
     if (pose.retryCount < 1) {
       pose.retryCount++;
-      executeJobRequest(pose, activeFile);
+      executeJobRequest(pose, fileToUse, keyToUse);
     } else {
       pose.status = 'error';
       showToast(`${pose.id} 포즈 이미지 생성 중 오류가 발생했습니다.`);
@@ -1003,6 +1176,8 @@ onUnmounted(() => stopPolling());
 .pose-tabs-v2 { display: flex; background: #f5f5f5; padding: 4px; border-radius: 10px; gap: 4px; }
 .pose-tab { flex: 1; padding: 6px; font-size: 0.8rem; font-weight: 600; color: #888; border-radius: 8px; transition: all 0.2s; background: transparent; border: none; cursor: pointer; }
 .pose-tab.active { background: #fff; color: #111; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+.pose-tabs-v2.is-disabled { opacity: 0.6; pointer-events: none; }
+.pose-tab:disabled { cursor: not-allowed; }
 
 .pose-grid-v2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
 .pose-thumb-v2 { aspect-ratio: 1/1.4; background: #eee; border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; border: 2px solid transparent; }
@@ -1014,6 +1189,33 @@ onUnmounted(() => stopPolling());
   transition: all 0.3s ease;
 }
 .pose-thumb-v2 img { width: 100%; height: 100%; object-fit: cover; }
+
+.metadata-group {
+  background: #fdfdfd;
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+.metadata-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.meta-label {
+  color: #888;
+  font-weight: 600;
+}
+.meta-value {
+  color: #111;
+  font-weight: 700;
+}
 
 .pose-loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; }
 .pose-done-check { position: absolute; bottom: 4px; right: 4px; background: #5c7cfa; color: white; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -1043,9 +1245,11 @@ onUnmounted(() => stopPolling());
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .pose-thumb-v2:hover .model-change-btn { opacity: 1; bottom: 12px; }
-.model-change-btn:hover { background: #fff; border-color: #5c7cfa; color: #5c7cfa; }
+.model-change-btn:hover:not(:disabled) { background: #fff; border-color: #5c7cfa; color: #5c7cfa; }
+.model-change-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .modern-textarea { width: 100%; height: 80px; border: 1px solid #eee; border-radius: 12px; padding: 12px; font-size: 0.85rem; resize: none; background: #f8f8f8; outline: none; transition: border-color 0.2s; }
+.modern-textarea::placeholder { font-weight: 300; opacity: 0.6; color: rgba(0,0,0,0.4); }
 .modern-textarea:focus { border-color: #5c7cfa; }
 .modern-textarea:disabled { opacity: 0.6; background: #eee; cursor: not-allowed; }
 
@@ -1117,14 +1321,14 @@ onUnmounted(() => stopPolling());
 /* Premium Glowing Wave Effect */
 .generating-vibe {
   position: relative;
-  border: 2px solid transparent !important;
+  border: 3px solid transparent !important;
   background-image: linear-gradient(#fff, #fff), 
                     linear-gradient(90deg, #5c7cfa, #12b886, #ae3ec9, #5c7cfa);
   background-origin: border-box;
   background-clip: padding-box, border-box;
   background-size: 100% 100%, 200% 100%;
   animation: border-wave-flow 3s linear infinite;
-  box-shadow: 0 10px 30px rgba(92, 124, 250, 0.15);
+  box-shadow: 0 20px 40px rgba(92, 124, 250, 0.15);
 }
 
 @keyframes border-wave-flow {
@@ -1134,7 +1338,8 @@ onUnmounted(() => stopPolling());
 
 /* Remove pulse animation as we moved to wave */
 @keyframes luxury-glow-pulse {
-  display: none;
+  0% { transform: scale(1); }
+  100% { transform: scale(1); }
 }
 
 /* Remove old pseudo-element borders */
@@ -1688,7 +1893,8 @@ onUnmounted(() => stopPolling());
 
 /* Remove loading card glow animation */
 @keyframes loading-card-glow {
-  display: none;
+  0% { opacity: 1; }
+  100% { opacity: 1; }
 }
 
 .is-loading-card::before {
