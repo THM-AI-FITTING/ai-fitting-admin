@@ -613,6 +613,10 @@ const downloadImage = async (url: string) => {
   overflow: hidden;
 }
 
+body:not(.light-mode) .comparison-card {
+  background: var(--color-bg-main) !important;
+}
+
 @media (min-width: 1101px) {
   .person-card {
     margin-right: 2rem; /* Wide gap between Person and Product */
@@ -633,6 +637,9 @@ const downloadImage = async (url: string) => {
   padding: 0.5rem;
   height: 100%;
 }
+#result-title {
+  color: var(--color-text-main);
+}
 
 @media (max-width: 768px) {
   .input-comparison-grid {
@@ -652,7 +659,7 @@ const downloadImage = async (url: string) => {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text-main);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg-alt);
   padding: 0.5rem 1rem;
   border-radius: 20px;
   display: inline-flex;
@@ -689,21 +696,7 @@ const downloadImage = async (url: string) => {
 
 /* Gradient text styles for title-person and title-product */
 /* These classes were not found in the provided document, so they are added here. */
-.title-person {
-  background: linear-gradient(to right, #6366f1, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent; /* Fallback for browsers that don't support -webkit-text-fill-color */
-}
-
-.title-product {
-  background: linear-gradient(to right, #10b981, #3b82f6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent; /* Fallback for browsers that don't support -webkit-text-fill-color */
-}
+/* Gradient text styles removed as requested */
 
 @media (max-width: 768px) {
   .comparison-layout {
@@ -1065,7 +1058,11 @@ const downloadImage = async (url: string) => {
 /* Failure Section Style */
 .failure-section {
   border: 1px solid rgba(239, 68, 68, 0.25);
-  background: var(--color-card-bg, #ffffff);
+  background: var(--color-bg-surface);
+}
+
+body:not(.light-mode) .failure-section {
+  background: var(--color-bg-main) !important;
 }
 
 .failure-display {
@@ -1139,7 +1136,8 @@ const downloadImage = async (url: string) => {
 
 .failure-text {
   font-size: 0.95rem;
-  color: #1f2937;
+  color: var(--color-text-main);
+  opacity: 0.8;
   font-weight: 400;
   line-height: 1.6;
   margin: 0;
@@ -1151,9 +1149,9 @@ const downloadImage = async (url: string) => {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   padding: 0.5rem 1rem;
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--color-bg-alt);
   border-radius: 20px;
 }
 
@@ -1172,16 +1170,18 @@ const downloadImage = async (url: string) => {
   margin-left: 1rem;
 }
 
+body:not(.light-mode) .premium {
+  background-image: linear-gradient(var(--color-bg-main), var(--color-bg-main)), 
+                    linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+}
+
 .fancy-title {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-weight: 800;
   font-size: 1.1rem;
-  background: linear-gradient(135deg, #6366f1, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-primary);
   letter-spacing: -0.01em;
 }
 
@@ -1197,8 +1197,8 @@ const downloadImage = async (url: string) => {
 }
 
 .result-section :deep(.card-header) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(0, 0, 0, 0.05);
 }
 .card-header-styled {
   display: flex;
@@ -1210,17 +1210,11 @@ const downloadImage = async (url: string) => {
 }
 
 .title-person {
-  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-main);
 }
 
 .title-product {
-  background: linear-gradient(135deg, #7c3aed, #db2777);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-main);
 }
 
 .header-icon {

@@ -280,7 +280,7 @@ const goToDetail = (job: any) => {
 .filter-actions { display: flex; gap: 0.75rem; }
 
 .card-header-actions { display: flex; align-items: center; justify-content: space-between; width: 100%; }
-.view-toggles-integrated { display: flex; background: rgba(0, 0, 0, 0.1); padding: 3px; border-radius: 8px; border: 1px solid var(--color-border); gap: 2px; }
+.view-toggles-integrated { display: flex; background: var(--color-bg-alt); padding: 3px; border-radius: 8px; border: 1px solid var(--color-border); gap: 2px; }
 .toggle-btn-modern { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: var(--color-text-muted); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
 .toggle-btn-modern.active { background: var(--color-primary); color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); }
 
@@ -310,7 +310,8 @@ const goToDetail = (job: any) => {
 .preview-content img { max-width: 100%; max-height: 85vh; border-radius: 8px; display: block; }
 .close-preview { position: absolute; top: -40px; right: 0; color: #fff; }
 
-.filter-select { background: #fff; border: 1px solid var(--color-border); border-radius: 8px; padding: 0 10px; height: 40px; font-size: 0.9rem; }
+.filter-select { background: var(--color-bg-alt); color: var(--color-text-main); border: 1px solid var(--color-border); border-radius: 8px; padding: 0 10px; height: 40px; font-size: 0.9rem; }
+.filter-select option { background: var(--color-bg-surface); color: var(--color-text-main); }
 
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin {

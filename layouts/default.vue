@@ -24,8 +24,8 @@ const isSidebarOpen = ref(true);
 const isMobileMenuOpen = ref(false); // 모바일 전용 수동 열림 상태
 
 const { theme, toggleTheme, updateBodyClass } = useTheme();
-const authCookie = useCookie('ai_admin_key');
-const ownerCookie = useCookie('ai_admin_owner');
+const authCookie = useCookie('ai_admin_key', { path: '/' });
+const ownerCookie = useCookie('ai_admin_owner', { path: '/' });
 
 // 쿠키가 없을 경우 '관리자'를 기본값으로 사용
 const adminOwner = computed(() => ownerCookie.value || '관리자');
@@ -70,20 +70,38 @@ const menuGroups = computed(() => [
   }
 ]);
 
-const handleLogout = () => {
-  if (!confirm('로그아웃 하시겠습니까?')) return;
-  
-  // 로그아웃 시 세션 쿠키 삭제
-  const authCookie = useCookie('ai_admin_key');
-  const ownerCookie = useCookie('ai_admin_owner');
-  authCookie.value = null;
-  ownerCookie.value = null;
-  
-  // 로그아웃 시 테마를 라이트 모드로 리셋 (사용자 요청: 로그인창은 라이트모드 기본)
-  theme.value = 'light';
-  updateBodyClass(); // 즉시 반영
-  
-  useRouter().push('/login');
+const router = useRouter(); // Use a single router instance
+
+const handleLogout = async () => {
+  console.log('[Logout] Start');
+  try {
+    console.log('[Logout] Current cookies:', {
+      auth: authCookie.value ? 'exists' : 'null',
+      owner: ownerCookie.value ? 'exists' : 'null'
+    });
+
+    console.log('[Logout] Clearing cookies');
+    authCookie.value = null;
+    ownerCookie.value = null;
+    
+    console.log('[Logout] Cookies after clearing:', {
+      auth: authCookie.value ? 'exists' : 'null',
+      owner: ownerCookie.value ? 'exists' : 'null'
+    });
+
+    console.log('[Logout] Resetting theme');
+    theme.value = 'light';
+    if (updateBodyClass) {
+      updateBodyClass();
+    }
+    
+    console.log('[Logout] Navigating to /login');
+    // replace: true를 통해 뒤로가기 방지
+    await navigateTo('/login', { replace: true, external: false });
+    console.log('[Logout] Navigation call finished');
+  } catch (error) {
+    console.error('[Logout] Exception occurred:', error);
+  }
 };
 </script>
 
