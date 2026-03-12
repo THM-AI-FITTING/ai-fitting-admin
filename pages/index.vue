@@ -90,10 +90,22 @@
                   </div>
                 </div>
               </template>
-              <template #owner="{ row }">
+              <template #origin="{ row }">
+                <div class="table-origin-cell">
+                  <div v-if="row.origin === 'STUDIO'" class="origin-badge studio">
+                    <Sparkles :size="12" />
+                    <span>스튜디오</span>
+                  </div>
+                  <div v-else class="origin-badge general">
+                    <Shirt :size="12" />
+                    <span>AI 가상피팅</span>
+                  </div>
+                </div>
+              </template>
+              <template #userId="{ row }">
                 <div class="table-owner-cell">
                   <User :size="14" class="owner-icon" />
-                  <span>{{ row.owner }}</span>
+                  <span>{{ row.userId }}</span>
                 </div>
               </template>
               <template #status="{ row }">
@@ -117,23 +129,20 @@
               @click="goToJobDetail(job)"
             >
               <div class="job-card-header">
-                <span class="job-id mono">{{ job.requestId }}</span>
+                <div class="flex-items-center gap-2">
+                  <span class="job-origin-dot" :class="job.origin?.toLowerCase()"></span>
+                  <span class="job-id mono">{{ job.requestId }}</span>
+                </div>
                 <StatusBadge :status="job.status" size="sm" />
               </div>
               <div class="job-card-footer">
-                <span class="job-owner">{{ job.owner }}</span>
+                <span class="job-owner">{{ job.userId }}</span>
                 <span class="job-date">{{ formatDate(job.sysRegDtm) }}</span>
               </div>
             </div>
           </div>
           
-          <template #footer>
-            <div class="flex-center">
-              <BaseButton variant="ghost" size="sm" @click="$router.push('/jobs')">
-                전체 보기
-              </BaseButton>
-            </div>
-          </template>
+          <!-- Removed Footer -->
         </BaseCard>
       </div>
 
@@ -148,7 +157,13 @@
               @click="goToJobDetail(job)"
             >
               <div class="failed-header">
-                <span class="failed-id">{{ job.requestId }}</span>
+                <div class="flex-items-center gap-2">
+                  <span class="job-origin-dot" :class="job.origin?.toLowerCase()"></span>
+                  <div class="failed-id-group">
+                    <span class="failed-id">{{ job.requestId }}</span>
+                    <span class="failed-user">{{ job.userId }}</span>
+                  </div>
+                </div>
                 <span class="failed-time">{{ formatTimeAgo(job.sysRegDtm) }}</span>
               </div>
               <div class="failed-reason">
@@ -177,7 +192,9 @@ import {
   RefreshCw,
   Fingerprint,
   User,
-  Calendar
+  Calendar,
+  Sparkles,
+  Shirt
 } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
@@ -194,7 +211,8 @@ const { data: stats, pending, refresh } = await useFetch(`${config.public.apiBas
 
 const jobColumns = [
   { key: 'requestId', label: '요청 ID' },
-  { key: 'owner', label: '파트너' },
+  { key: 'origin', label: '구분' },
+  { key: 'userId', label: '이용자' },
   { key: 'status', label: '상태' },
   { key: 'sysRegDtm', label: '요청 시간' },
 ];
@@ -228,7 +246,11 @@ const formatTimeAgo = (ts: any) => {
 
 const router = useRouter();
 const goToJobDetail = (row: any) => {
-  router.push(`/jobs/${row.requestId}`);
+  if (row.origin === 'STUDIO') {
+    router.push(`/studio/${row.poseGroupId}`);
+  } else {
+    router.push(`/jobs/${row.requestId}`);
+  }
 };
 </script>
 
@@ -454,12 +476,27 @@ const goToJobDetail = (row: any) => {
   color: var(--color-text-main);
 }
 
+/* Recent Jobs Table Scroll */
+.hidden-mobile :deep(.base-table-container) {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar for table */
+.hidden-mobile :deep(.base-table-container)::-webkit-scrollbar {
+  width: 4px;
+}
+.hidden-mobile :deep(.base-table-container)::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
 /* Failed List */
 .failed-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-height: 480px; /* Aligned with Recent Jobs table typical height */
+  max-height: 400px; /* Reduced from 750px to approx 60% of initial large view */
   overflow-y: auto;
   padding-right: 0.5rem;
   margin-right: -0.5rem;
@@ -540,6 +577,7 @@ const goToJobDetail = (row: any) => {
   text-transform: uppercase;
   border-bottom: 2px solid var(--color-border);
   padding: 0.85rem 1.5rem;
+  text-align: center;
 }
 
 body.light-mode .section-main :deep(.base-table thead th) {
@@ -588,6 +626,73 @@ body.light-mode .section-main :deep(.base-table thead th) {
 
 .date-icon {
   opacity: 0.6;
+}
+
+.table-origin-cell {
+  display: flex;
+  align-items: center;
+}
+
+.origin-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.origin-badge.studio {
+  background: rgba(139, 92, 246, 0.1);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.origin-badge.general {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.flex-items-center {
+  display: flex;
+  align-items: center;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.job-origin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.job-origin-dot.studio {
+  background: #a78bfa;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+}
+
+.job-origin-dot.general {
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.failed-id-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.failed-user {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 @keyframes spin {
