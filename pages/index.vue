@@ -358,7 +358,7 @@ const goToJobDetail = (row: any) => {
 
 .content-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2.3fr 1fr; /* Main section adjusted to 2.3fr (approx 69.7%) */
   gap: 1.5rem;
   align-items: stretch; /* Cards will have the same height */
 }
