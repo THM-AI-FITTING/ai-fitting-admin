@@ -132,12 +132,77 @@
       </div>
 
       <div class="sidebar-footer-v2">
+        <!-- Ratio & Quality Selection Area (Popover Style) -->
+        <div class="generation-options-v2 row-layout">
+          <!-- Aspect Ratio Selection -->
+          <div class="popover-wrapper" v-click-outside="() => activePopover = null">
+            <button 
+              class="popover-trigger-btn" 
+              :class="{ active: activePopover === 'ratio' }"
+              @click.stop="activePopover = activePopover === 'ratio' ? null : 'ratio'"
+            >
+              <span class="trigger-label">{{ aspectRatios.find(r => r.value === selectedAspectRatio)?.label }}</span>
+              <ChevronDown :size="14" class="chevron" />
+            </button>
+            
+            <Transition name="popover-fade">
+              <div v-if="activePopover === 'ratio'" class="popover-content ratio-popover shadow-premium" @click.stop>
+                <div class="popover-header">화면 비율</div>
+                <div class="ratio-grid-v2">
+                  <button 
+                    v-for="r in aspectRatios" :key="r.id"
+                    class="ratio-card-v2"
+                    :class="{ active: selectedAspectRatio === r.value }"
+                    @click="selectedAspectRatio = r.value; activePopover = null"
+                  >
+                    <div class="ratio-icon-box" :class="r.id">
+                      <div class="ratio-shape"></div>
+                    </div>
+                    <span class="ratio-text">{{ r.label }}</span>
+                  </button>
+                </div>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- Quality Selection -->
+          <div class="popover-wrapper" v-click-outside="() => activePopover = null">
+            <button 
+              class="popover-trigger-btn" 
+              :class="{ active: activePopover === 'quality' }"
+              @click.stop="activePopover = activePopover === 'quality' ? null : 'quality'"
+            >
+              <span class="trigger-label">{{ qualityOptions.find(q => q.value === selectedQuality)?.label }}</span>
+              <ChevronDown :size="14" class="chevron" />
+            </button>
+
+            <Transition name="popover-fade">
+              <div v-if="activePopover === 'quality'" class="popover-content quality-popover shadow-premium" @click.stop>
+                <div class="popover-header">해상도</div>
+                <div class="quality-list-v2">
+                  <button 
+                    v-for="q in qualityOptions" :key="q.value"
+                    class="quality-option-item"
+                    :class="{ active: selectedQuality === q.value }"
+                    @click="selectedQuality = q.value; activePopover = null"
+                  >
+                    <span>{{ q.label }}</span>
+                    <Check v-if="selectedQuality === q.value" :size="14" />
+                  </button>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </div>
+
         <button 
           class="generate-action-btn"
           :disabled="(!topImage && !bottomImage) || selectedPoseIds.length === 0 || allGenerating"
           @click="generateAllPoses"
         >
-          <span>지금 생성</span>
+          <Sparkles v-if="!allGenerating" :size="20" />
+          <div v-else class="mini-spinner-white"></div>
+          <span>{{ allGenerating ? '생성 중...' : '지금 생성' }}</span>
         </button>
       </div>
     </div>
@@ -189,9 +254,15 @@
                           <div class="result-hover-actions">
                             <button class="hover-action-btn" @click.stop="viewingHistoryUrl = item.url; isImageViewerOpen = true">
                               <Search :size="18" />
+                              <span class="btn-label">확대</span>
                             </button>
                             <button class="hover-action-btn wand-btn" @click.stop="setAsBaseImage(item.url)">
                               <Wand2 :size="18" />
+                              <span class="btn-label">재생성</span>
+                            </button>
+                            <button class="hover-action-btn save-btn" @click.stop="downloadImage(item.url)">
+                              <Download :size="18" />
+                              <span class="btn-label">사진저장</span>
                             </button>
                           </div>
                         </template>
@@ -233,11 +304,22 @@
 
     <!-- Image Viewer Modal -->
     <Teleport to="body">
-      <Transition name="fade">
+      <Transition name="fade-fast">
         <div v-if="isImageViewerOpen" class="image-viewer-overlay" @click="isImageViewerOpen = false">
           <div class="image-viewer-content" @click.stop>
             <button class="viewer-close-btn" @click="isImageViewerOpen = false"><X :size="24" /></button>
-            <img v-if="viewingHistoryUrl || displayImageUrl" :src="viewingHistoryUrl || displayImageUrl || undefined" class="viewer-img" />
+            <div 
+              class="viewer-img-container" 
+              :class="{ 'is-zoomed': isExtraZoomed }" 
+              @click="handleZoom($event)"
+              :style="{ transformOrigin: zoomOrigin }"
+            >
+              <img 
+                v-if="viewingHistoryUrl || displayImageUrl" 
+                :src="viewingHistoryUrl || displayImageUrl || undefined" 
+                class="viewer-img" 
+              />
+            </div>
           </div>
         </div>
       </Transition>
@@ -364,7 +446,7 @@ import {
 import { useRuntimeConfig, useCookie, useRoute, useHead } from '#app';
 
 definePageMeta({ 
-  title: '스튜디오 가상피팅 생성' // Default title
+  title: '📸 스튜디오 가상피팅 생성' // Default title
 });
 
 const route = useRoute();
@@ -376,12 +458,47 @@ const currentUserId = computed(() => ownerCookie.value || 'dev');
 // --- State ---
 const currentGender = ref('female');
 const promptText = ref('');
+const selectedAspectRatio = ref('3:4');
+const selectedQuality = ref('1K');
+const activePopover = ref<string | null>(null);
 const poseGroupId = ref(crypto.randomUUID());
+
+// --- Click Outside Directive ---
+const vClickOutside = {
+  mounted(el: any, binding: any) {
+    el.clickOutsideEvent = (event: Event) => {
+      if (!(el === event.target || el.contains(event.target))) {
+        binding.value();
+      }
+    };
+    document.addEventListener('click', el.clickOutsideEvent);
+  },
+  unmounted(el: any) {
+    document.removeEventListener('click', el.clickOutsideEvent);
+  },
+};
 
 const topImage = ref<string | null>(null);
 const bottomImage = ref<string | null>(null);
 const selectedFiles = reactive<{ top: File | null, bottom: File | null }>({ top: null, bottom: null });
 const productImageKeys = reactive<{ top: string | null, bottom: string | null }>({ top: null, bottom: null });
+
+const aspectRatios = [
+  { id: 'auto', label: '비율:자동', value: 'auto' },
+  { id: 'r16x9', label: '16:9', value: '16:9' },
+  { id: 'r9x16', label: '9:16', value: '9:16' },
+  { id: 'r1x1', label: '1:1', value: '1:1' },
+  { id: 'r3x4', label: '3:4', value: '3:4' },
+  { id: 'r4x3', label: '4:3', value: '4:3' },
+  { id: 'r3x2', label: '3:2', value: '3:2' },
+  { id: 'r2x3', label: '2:3', value: '2:3' },
+];
+
+const qualityOptions = [
+  { label: '1K', value: '1K' },
+  { label: '2K', value: '2K' },
+  { label: '4K', value: '4K' },
+];
 
 // --- Detail Mode State ---
 const groupId = computed(() => route.query.groupId as string);
@@ -406,6 +523,27 @@ useHead({
 const viewingPoseId = ref('A');
 const viewingHistoryUrl = ref<string | null>(null);
 const isImageViewerOpen = ref(false);
+const isExtraZoomed = ref(false);
+const zoomOrigin = ref('50% 50%');
+
+const handleZoom = (e: MouseEvent) => {
+  if (!isExtraZoomed.value) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    zoomOrigin.value = `${x}% ${y}%`;
+    isExtraZoomed.value = true;
+  } else {
+    isExtraZoomed.value = false;
+  }
+};
+
+watch(isImageViewerOpen, (val) => {
+  if (!val) {
+    isExtraZoomed.value = false;
+    zoomOrigin.value = '50% 50%';
+  }
+});
 
 // --- Custom Model Modal State ---
 const isCustomModelModalOpen = ref(false);
@@ -811,6 +949,26 @@ const setAsBaseImage = (url: string) => {
   }
 };
 
+const downloadImage = async (url: string) => {
+  if (!url) return;
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `ai-fitting-result-${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    console.error('Download failed:', e);
+    // Fallback: open in new tab if fetch fails (e.g. CORS)
+    window.open(url, '_blank');
+  }
+};
+
 const selectCustomModel = (url: string) => {
   const pose = poseStates.find(p => p.id === modalActivePoseId.value && p.gender === currentGender.value);
   if (pose) {
@@ -1087,6 +1245,8 @@ const executeJobRequest = async (pose: PoseState, fileToUse: File | null, keyToU
   formData.append('personImageKey', extractS3Key(pose.customPersonUrl) || `sample/${currentGender.value}-${selectedProductType.value}-${pose.type === 'front' ? 'front' : 'rear'}_${pose.id.toLowerCase()}.jpg`);
   formData.append('prompt', promptText.value);
   formData.append('userId', currentUserId.value);
+  formData.append('aspectRatio', selectedAspectRatio.value);
+  formData.append('imageSize', selectedQuality.value);
 
   // Debug: FormData contents
   console.log('[Studio] Sending Job Request:', Object.fromEntries(formData.entries()));
@@ -1188,7 +1348,7 @@ onUnmounted(() => stopPolling());
   position: relative; 
   display: flex; 
   align-items: center; 
-  background: var(--color-bg-alt); 
+  background: var(--color-bg-surface);
   border-radius: 12px; 
   border: 1px solid var(--color-border); 
   padding: 0 12px; 
@@ -1348,12 +1508,231 @@ body:not(.light-mode) .modern-textarea::placeholder {
 }
 
 .sidebar-footer-v2 { 
-  padding: 1.5rem 2rem;
+  padding: 1rem;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
-.generate-action-btn { width: 100%; height: 52px; background: var(--color-bg-alt); color: var(--color-text-muted); border-radius: 12px; font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border: none; transition: background 0.2s; }
-.generate-action-btn:not(:disabled) { background: var(--color-primary); color: #fff; cursor: pointer; }
+
+.generation-options-v2.row-layout {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.popover-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.popover-trigger-btn {
+  width: 100%;
+  height: 32px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  cursor: pointer;
+  transition: all 0.23s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.popover-trigger-btn:hover {
+  background: var(--color-bg-header);
+  border-color: #cbd5e1;
+}
+
+.popover-trigger-btn.active {
+  background: var(--color-bg-surface);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.trigger-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.popover-trigger-btn.active .chevron {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+
+.popover-content {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 1.25rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ratio-popover { width: 440px; }
+.quality-popover { width: 140px; padding: 0.75rem; }
+
+.popover-header {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  padding: 0 2px;
+}
+
+.ratio-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.ratio-card-v2 {
+  background: var(--color-bg-alt);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ratio-card-v2:hover {
+  background: var(--color-bg-header);
+  transform: translateY(-2px);
+}
+
+.ratio-card-v2.active {
+  background: var(--color-bg-surface);
+  border-color: var(--color-primary);
+}
+
+.ratio-icon-box {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ratio-shape {
+  background: #cbd5e1;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.ratio-card-v2.active .ratio-shape {
+  background: var(--color-primary);
+}
+
+/* Shapes for various aspect ratios */
+.auto .ratio-shape { width: 18px; height: 18px; border-radius: 2px; }
+.r16x9 .ratio-shape { width: 24px; height: 13.5px; }
+.r9x16 .ratio-shape { width: 13.5px; height: 24px; }
+.r1x1 .ratio-shape { width: 18px; height: 18px; }
+.r3x4 .ratio-shape { width: 15px; height: 20px; }
+.r4x3 .ratio-shape { width: 20px; height: 15px; }
+.r3x2 .ratio-shape { width: 21px; height: 14px; }
+.r2x3 .ratio-shape { width: 14px; height: 21px; }
+
+.ratio-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.quality-list-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quality-option-item {
+  width: 100%;
+  height: 44px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quality-option-item:hover {
+  background: var(--color-bg-alt);
+}
+
+.quality-option-item.active {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--color-primary);
+}
+
+.generate-action-btn { 
+  width: 100%; 
+  height: 54px; 
+  background: var(--color-bg-alt); 
+  color: var(--color-text-muted); 
+  border-radius: 14px; 
+  font-size: 1rem; 
+  font-weight: 850; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 10px;
+  border: none; 
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover-fade-enter-active, .popover-fade-leave-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover-fade-enter-from { opacity: 0; transform: translateY(10px) scale(0.95); }
+.popover-fade-leave-to { opacity: 0; transform: translateY(5px) scale(0.98); }
+
+.generate-action-btn:not(:disabled) { 
+  background: var(--color-primary); 
+  color: #fff; 
+  cursor: pointer;
+  box-shadow: 0 10px 25px -5px rgba(var(--color-primary-rgb), 0.4);
+}
+
+.generate-action-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px -5px rgba(var(--color-primary-rgb), 0.5);
+}
+
+.generate-action-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.mini-spinner-white {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
 
 .studio-main-v2 { 
   flex: 1; 
@@ -1466,8 +1845,8 @@ body:not(.light-mode) .modern-textarea::placeholder {
   display: flex; 
   align-items: center; 
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  /* width: 100%; */
+  /* height: 100%; */
   max-width: 100%;
   max-height: 100%;
   padding: 15px; /* 사용자가 요청한 15px 패딩 */
@@ -1486,7 +1865,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
 .result-img { 
   display: block; 
   /* width: 100%; */
-  height: 100%;
+  /* height: 100%; */
   max-width: 100%; 
   max-height: 100%; 
   object-fit: contain;
@@ -1519,12 +1898,15 @@ body:not(.light-mode) .modern-textarea::placeholder {
 
 .result-hover-actions {
   position: absolute;
-  top: 40px;
-  right: 65px;
+  top: 10%;
+  right: 10%;
   display: flex;
   flex-direction: column;
+  align-items: flex-start; /* 아이콘은 왼쪽에 고정 */
   gap: 8px;
   z-index: 10;
+  width: 46px; /* 아이콘 기본 너비에 고정하여 확장 시에도 왼쪽 시작점 유지 */
+  overflow: visible; /* 라벨이 우측으로 넘어갈 수 있도록 허용 */
 }
 
 .hover-action-btn {
@@ -1539,9 +1921,10 @@ body:not(.light-mode) .modern-textarea::placeholder {
   color: var(--color-text-main);
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   opacity: 0;
-  transform: translateX(10px);
+  transform: translateX(10px); /* 우측에서 나타나는 느낌으로 변경 */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  flex-shrink: 0; /* 너비 고정 유지 */
 }
 
 .img-inner-wrap:hover .hover-action-btn {
@@ -1560,6 +1943,34 @@ body:not(.light-mode) .modern-textarea::placeholder {
   background: #7e5bef;
   border-color: #7e5bef;
 }
+
+.hover-action-btn.save-btn:hover {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.hover-action-btn .btn-label {
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+}
+
+.hover-action-btn:hover {
+  width: auto;
+  padding: 0 16px;
+  gap: 8px;
+  border-radius: 23px;
+}
+
+.hover-action-btn:hover .btn-label {
+  width: auto;
+  opacity: 1;
+}
+
 .empty-preview-v2 {
   flex: 1;
   display: flex;
@@ -1783,6 +2194,14 @@ body:not(.light-mode) .modern-textarea::placeholder {
   transform: translate(-50%, -10px) scale(0.95);
 }
 
+/* Fade Fast Transition */
+.fade-fast-enter-active, .fade-fast-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-fast-enter-from, .fade-fast-leave-to {
+  opacity: 0;
+}
+
 .animate-scale-up { animation: scale-up 0.4s ease-out; }
 
 /* Image Viewer Modal CSS */
@@ -1803,6 +2222,17 @@ body:not(.light-mode) .modern-textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.viewer-img-container {
+  cursor: zoom-in;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewer-img-container.is-zoomed {
+  cursor: zoom-out;
+  transform: scale(1.5);
 }
 .viewer-img {
   max-width: 100%;
