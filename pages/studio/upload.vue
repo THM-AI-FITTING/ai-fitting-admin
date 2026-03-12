@@ -956,8 +956,9 @@ const generateAllPoses = async () => {
     return;
   }
 
-  // If not in detail mode OR if a new file is uploaded, we generate a new group ID
-  if (!isDetailMode.value || hasFile) {
+  // If not in detail mode, we use the existing poseGroupId.value (initialized as randomUUID)
+  // We no longer regenerate it even if a new file is uploaded, to keep them in the same group.
+  if (!isDetailMode.value && !poseGroupId.value) {
     poseGroupId.value = crypto.randomUUID();
   }
 
@@ -1457,7 +1458,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
 .result-hover-actions {
   position: absolute;
   top: 40px;
-  right: 50px;
+  right: 65px;
   display: flex;
   flex-direction: column;
   gap: 8px;
