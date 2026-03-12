@@ -94,6 +94,8 @@
                 'disabled-card': !isPoseClickable(p.type) || allGenerating
               }"
               @click="(isPoseClickable(p.type) && !allGenerating) ? togglePoseSelection(p.id) : null"
+              @mouseenter="setHoveredPose($event, p)"
+              @mouseleave="clearHoveredPose"
             >
               <div class="pose-thumb-v2">
                 <img :src="p.customPersonUrl || getSampleImageUrl(p.id)" :alt="p.name" />
@@ -148,7 +150,6 @@
           <div class="preview-card-v2 shadow-premium" :class="{ 'generating-vibe': allGenerating }">
             <!-- New Header Wrapper -->
             <div class="slider-header-v2">
-              <h3 class="section-title-v2 inside">가상 피팅 결과</h3>
               <div class="pose-view-selector-v2">
                 <button 
                   v-for="p in filteredPoses" 
@@ -334,6 +335,23 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Pose Preview Tooltip (Hover) -->
+    <Teleport to="body">
+      <Transition name="preview-pop">
+        <div v-if="hoveredPoseData" class="pose-preview-tooltip" :style="hoverTooltipStyle">
+          <div class="preview-tooltip-inner">
+            <div class="preview-img-box">
+              <img :src="hoveredPoseData.url" alt="Pose Preview" />
+            </div>
+            <div class="preview-info">
+              <span class="pose-name">{{ hoveredPoseData.name }}</span>
+              <span class="pose-desc">{{ hoveredPoseData.type === 'front' ? '전면 포즈' : '후면 포즈' }}</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -379,11 +397,11 @@ const selectedPoseIds = ref<string[]>([]);
 
 // --- Dynamic Page Title ---
 watch(isDetailMode, (val) => {
-  route.meta.title = val ? '스튜디오 가상피팅 작업 상세' : '스튜디오 가상피팅 생성';
+  route.meta.title = val ? '📸 가상 피팅 작업 상세 ' : '📸 스튜디오 가상피팅 생성';
 }, { immediate: true });
 
 useHead({
-  title: computed(() => isDetailMode.value ? '스튜디오 가상피팅 작업 상세' : '스튜디오 가상피팅 생성')
+  title: computed(() => isDetailMode.value ? '📸 가상 피팅 작업 상세 ' : '📸 스튜디오 가상피팅 생성')
 });
 const viewingPoseId = ref('A');
 const viewingHistoryUrl = ref<string | null>(null);
@@ -441,6 +459,49 @@ const modalIsDragging = ref(false);
 const modalStartX = ref(0);
 const modalDragOffset = ref(0);
 const modalTransitionName = ref('fade-slide');
+
+// --- Hover Preview State ---
+const hoveredPoseData = ref<{ id: string, name: string, type: string, url: string } | null>(null);
+const hoverTooltipStyle = reactive({
+  top: '0px',
+  left: '0px'
+});
+
+const setHoveredPose = (event: MouseEvent, pose: PoseState) => {
+  if (allGenerating.value) return;
+  
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  
+  // 툴팁 예상 높이 (너비 280px 기준 이미지 약 392px + 하단 텍스트 60px)
+  const tooltipHeight = 460;
+  const viewportHeight = window.innerHeight;
+  
+  let topPos = rect.top;
+  
+  // 화면 하단을 벗어날 경우 위로 끌어올림
+  if (topPos + tooltipHeight > viewportHeight - 20) {
+    topPos = viewportHeight - tooltipHeight - 20;
+  }
+  // 화면 상단을 벗어날 경우 아래로 내림
+  if (topPos < 20) {
+    topPos = 20;
+  }
+  
+  // 툴팁 위치 지정 (카드 오른쪽)
+  hoverTooltipStyle.top = `${topPos}px`;
+  hoverTooltipStyle.left = `${rect.right + 20}px`;
+  
+  hoveredPoseData.value = {
+    id: pose.id,
+    name: pose.name,
+    type: pose.type,
+    url: pose.customPersonUrl || getSampleImageUrl(pose.id)
+  };
+};
+
+const clearHoveredPose = () => {
+  hoveredPoseData.value = null;
+};
 
 const onModalDragStart = (e: MouseEvent) => {
   if (modalTotalPages.value <= 1) return;
@@ -1077,7 +1138,7 @@ onUnmounted(() => stopPolling());
   overflow: visible; /* 그림자가 잘리지 않도록 수정 */
   position: relative;
   font-family: 'Pretendard', sans-serif;
-  padding: 2.5rem; /* 전체적인 여백 확보로 그림자 공간 마련 */
+  padding: 0.3rem; /* 전체적인 여백 확보로 그림자 공간 마련 */
   box-sizing: border-box;
 }
 
@@ -1110,7 +1171,7 @@ onUnmounted(() => stopPolling());
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  padding: 2rem;
+  padding: 1.5rem;
 }
 .sidebar-content-v2::-webkit-scrollbar { width: 4px; }
 .sidebar-content-v2::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
@@ -1385,7 +1446,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   align-items: center; 
   justify-content: center; 
   position: relative; 
-  padding: 1.5rem; /* 안전거리 확보 */
+  padding: 1rem; /* 안전거리 확보 */
   box-sizing: border-box; 
   overflow: visible; 
   border-radius: 0 0 20px 20px;
@@ -1435,6 +1496,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   transition: opacity 0.5s ease;
   cursor: default !important;
   padding: 0; 
+  background: #ffffff;
 }
 
 .animate-fade-in {
@@ -1448,7 +1510,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
 
 
 /* Hover Zoom Button */
-.hover-zoom-btn:hover {
+.hover-zoom-btn:hover { 
   background: #5c7cfa;
   color: white;
   border-color: #5c7cfa;
@@ -1511,7 +1573,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 1.5rem 0.5rem;
+  padding: 1rem 1rem 0.5rem;
   z-index: 20;
 }
 
@@ -1551,6 +1613,8 @@ body:not(.light-mode) .modern-textarea::placeholder {
   border-radius: 12px;
   cursor: grab;
   user-select: none;
+  background: var(--color-bg-alt);
+  padding: 1rem;
 }
 
 .slider-container-v2.dragging {
@@ -1959,4 +2023,81 @@ body:not(.light-mode) .modern-textarea::placeholder {
 }
 .radiant-loader.mini { width: 30px; height: 30px; border-width: 2px; }
 .loader-text-mini { font-size: 0.8rem; font-weight: 600; color: #999; margin: 0; }
+
+/* Pose Preview Tooltip */
+.pose-preview-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.25));
+}
+
+.preview-tooltip-inner {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  overflow: hidden;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  animation: tooltip-shake 0.4s ease-out;
+}
+
+.preview-img-box {
+  width: 100%;
+  aspect-ratio: 1/1.4;
+  background: var(--color-bg-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-info {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--color-bg-surface);
+}
+
+.preview-info .pose-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+}
+
+.preview-info .pose-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* Transitions */
+.preview-pop-enter-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.preview-pop-leave-active {
+  transition: all 0.2s ease-in;
+}
+.preview-pop-enter-from {
+  opacity: 0;
+  transform: translateX(-15px) scale(0.95);
+}
+.preview-pop-leave-to {
+  opacity: 0;
+  transform: translateX(-10px) scale(0.98);
+}
+
+@keyframes tooltip-shake {
+  0% { transform: scale(0.98); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
 </style>
