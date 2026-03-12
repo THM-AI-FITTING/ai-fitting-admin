@@ -397,11 +397,11 @@ const selectedPoseIds = ref<string[]>([]);
 
 // --- Dynamic Page Title ---
 watch(isDetailMode, (val) => {
-  route.meta.title = val ? '📸 가상 피팅 작업 상세 ' : '📸 스튜디오 가상피팅 생성';
+  route.meta.title = val ? '📸 가상 피팅 작업 상세' : '📸 스튜디오 가상피팅 생성';
 }, { immediate: true });
 
 useHead({
-  title: computed(() => isDetailMode.value ? '📸 가상 피팅 작업 상세 ' : '📸 스튜디오 가상피팅 생성')
+  title: computed(() => isDetailMode.value ? '📸 가상 피팅 작업 상세' : '📸 스튜디오 가상피팅 생성')
 });
 const viewingPoseId = ref('A');
 const viewingHistoryUrl = ref<string | null>(null);
