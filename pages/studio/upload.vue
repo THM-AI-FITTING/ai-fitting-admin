@@ -1898,7 +1898,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
 
 .result-hover-actions {
   position: absolute;
-  top: 10%;
+  top: 8%;
   right: 10%;
   display: flex;
   flex-direction: column;
