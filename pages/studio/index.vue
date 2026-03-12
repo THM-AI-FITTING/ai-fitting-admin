@@ -169,7 +169,7 @@ import StatusBadge from '~/components/ui/StatusBadge.vue';
 import BaseCheckbox from '~/components/ui/BaseCheckbox.vue';
 
 definePageMeta({
-  title: '스튜디오 작업 목록'
+  title: '📸 스튜디오 작업 목록'
 });
 
 const router = useRouter();
