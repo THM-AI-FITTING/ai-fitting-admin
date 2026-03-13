@@ -4,20 +4,6 @@
     <!-- Left Sidebar: Controls -->
     <div class="studio-sidebar-v2">
       <div class="sidebar-content-v2">
-        <!-- Basic Info (Only in Detail Mode) -->
-        <section v-if="isDetailMode" class="control-group metadata-group">
-          <div class="metadata-grid">
-            <div class="meta-item">
-              <span class="meta-label">사용자 ID</span>
-              <span class="meta-value">{{ metadata.userId }}</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">생성일</span>
-              <span class="meta-value">{{ formatDate(metadata.regDtm) }}</span>
-            </div>
-          </div>
-        </section>
-
         <!-- Clothing Upload Row (Top & Bottom) -->
         <section class="control-group">
           <div class="group-header">
@@ -129,13 +115,56 @@
             placeholder="예: 실크 소재의 느낌을 살려줘, 배경을 더 밝게 해줘 등"
           ></textarea>
         </section>
+        ㅁ
+        <!-- Basic Info (Only in Detail Mode) -->
+        <section v-if="isDetailMode" class="control-group metadata-group">
+          <div class="metadata-grid">
+            <div class="meta-item">
+              <span class="meta-label">사용자 ID</span>
+              <span class="meta-value">{{ metadata.userId }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">생성일</span>
+              <span class="meta-value">{{ formatDate(metadata.regDtm) }}</span>
+            </div>
+          </div>
+        </section>
       </div>
 
       <div class="sidebar-footer-v2">
         <!-- Ratio & Quality Selection Area (Popover Style) -->
         <div class="generation-options-v2 row-layout">
-          <!-- Aspect Ratio Selection -->
-          <div class="popover-wrapper" v-click-outside="() => activePopover = null">
+          <!-- Model Selection (40%) -->
+          <div class="popover-wrapper" style="flex: 4;" v-click-outside="() => activePopover = null">
+            <button 
+              class="popover-trigger-btn" 
+              :class="{ active: activePopover === 'model' }"
+              @click.stop="activePopover = activePopover === 'model' ? null : 'model'"
+            >
+              <span class="trigger-label">{{ modelOptions.find(m => m.value === selectedModel)?.label }}</span>
+              <ChevronDown :size="14" class="chevron" />
+            </button>
+
+            <Transition name="popover-fade">
+              <div v-if="activePopover === 'model'" class="popover-content quality-popover shadow-premium" @click.stop>
+                <div class="popover-header">모델 선택</div>
+                <div class="quality-list-v2">
+                  <button 
+                    v-for="m in modelOptions" :key="m.value"
+                    class="quality-option-item"
+                    :class="{ active: selectedModel === m.value }"
+                    @click="selectedModel = m.value; activePopover = null"
+                  >
+                    <span>{{ m.label }}</span>
+                    <Check v-if="selectedModel === m.value" :size="14" />
+                  </button>
+                </div>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- Aspect Ratio Selection (30%) -->
+          <div class="popover-wrapper" style="flex: 3;" v-click-outside="() => activePopover = null">
             <button 
               class="popover-trigger-btn" 
               :class="{ active: activePopover === 'ratio' }"
@@ -165,20 +194,21 @@
             </Transition>
           </div>
 
-          <!-- Quality Selection -->
-          <div class="popover-wrapper" v-click-outside="() => activePopover = null">
+          <!-- Quality Selection (30%) -->
+          <div class="popover-wrapper" style="flex: 3;" v-click-outside="() => activePopover = null">
             <button 
               class="popover-trigger-btn" 
-              :class="{ active: activePopover === 'quality' }"
+              :class="{ active: activePopover === 'quality', 'is-disabled': isQualityDisabled }"
+              :disabled="isQualityDisabled"
               @click.stop="activePopover = activePopover === 'quality' ? null : 'quality'"
             >
-              <span class="trigger-label">{{ qualityOptions.find(q => q.value === selectedQuality)?.label }}</span>
+              <span class="trigger-label">{{ qualityOptions.find(q => q.value === selectedQuality)?.label || (isQualityDisabled ? '-' : selectedQuality) }}</span>
               <ChevronDown :size="14" class="chevron" />
             </button>
 
             <Transition name="popover-fade">
               <div v-if="activePopover === 'quality'" class="popover-content quality-popover shadow-premium" @click.stop>
-                <div class="popover-header">해상도</div>
+                <div class="popover-header">품질</div>
                 <div class="quality-list-v2">
                   <button 
                     v-for="q in qualityOptions" :key="q.value"
@@ -460,6 +490,7 @@ const currentGender = ref('female');
 const promptText = ref('');
 const selectedAspectRatio = ref('3:4');
 const selectedQuality = ref('1K');
+const selectedModel = ref('gemini-2.5-flash-image');
 const activePopover = ref<string | null>(null);
 const poseGroupId = ref(crypto.randomUUID());
 
@@ -483,22 +514,52 @@ const bottomImage = ref<string | null>(null);
 const selectedFiles = reactive<{ top: File | null, bottom: File | null }>({ top: null, bottom: null });
 const productImageKeys = reactive<{ top: string | null, bottom: string | null }>({ top: null, bottom: null });
 
-const aspectRatios = [
-  { id: 'auto', label: '비율:자동', value: 'auto' },
-  { id: 'r16x9', label: '16:9', value: '16:9' },
-  { id: 'r9x16', label: '9:16', value: '9:16' },
-  { id: 'r1x1', label: '1:1', value: '1:1' },
-  { id: 'r3x4', label: '3:4', value: '3:4' },
-  { id: 'r4x3', label: '4:3', value: '4:3' },
-  { id: 'r3x2', label: '3:2', value: '3:2' },
-  { id: 'r2x3', label: '2:3', value: '2:3' },
+const aspectRatios = computed(() => {
+  const base = [
+    { id: 'auto', label: '비율:자동', value: 'auto' },
+    { id: 'r16x9', label: '16:9', value: '16:9' },
+    { id: 'r9x16', label: '9:16', value: '9:16' },
+    { id: 'r1x1', label: '1:1', value: '1:1' },
+    { id: 'r3x4', label: '3:4', value: '3:4' },
+    { id: 'r4x3', label: '4:3', value: '4:3' },
+    { id: 'r3x2', label: '3:2', value: '3:2' },
+    { id: 'r2x3', label: '2:3', value: '2:3' },
+  ];
+
+  if (selectedModel.value === 'gemini-3.1-flash-image-preview') {
+    return [
+      ...base,
+      { id: 'r1x4', label: '1:4', value: '1:4' },
+      { id: 'r4x1', label: '4:1', value: '4:1' },
+      { id: 'r1x8', label: '1:8', value: '1:8' },
+      { id: 'r8x1', label: '8:1', value: '8:1' },
+    ];
+  }
+  return base;
+});
+
+const qualityOptions = computed(() => {
+  const base = [
+    { label: '1K', value: '1K' },
+    { label: '2K', value: '2K' },
+    { label: '4K', value: '4K' },
+  ];
+  if (selectedModel.value === 'gemini-3.1-flash-image-preview') {
+    return [{ label: '512', value: '512' }, ...base];
+  }
+  return base;
+});
+
+const modelOptions = [
+  { label: '🍌 Nano Banana 2', value: 'gemini-3.1-flash-image-preview' },
+  { label: '🍌 Nano Banana Pro', value: 'gemini-3-pro-image-preview' },
+  { label: '🍌 Nano Banana', value: 'gemini-2.5-flash-image' },
 ];
 
-const qualityOptions = [
-  { label: '1K', value: '1K' },
-  { label: '2K', value: '2K' },
-  { label: '4K', value: '4K' },
-];
+const isQualityDisabled = computed(() => {
+  return selectedModel.value !== 'gemini-3.1-flash-image-preview' && 
+         selectedModel.value !== 'gemini-3-pro-image-preview';
+});
 
 // --- Detail Mode State ---
 const groupId = computed(() => route.query.groupId as string);
@@ -1019,6 +1080,7 @@ const loadJobData = async () => {
         poseGroupId.value = groupId.value as any;
         currentGender.value = (first.gender || 'female').toLowerCase();
         selectedProductType.value = first.productType || 'base';
+        selectedModel.value = first.model || 'gemini-2.5-flash-image';
         promptText.value = first.prompt || '';
         metadata.userId = first.userId || '-';
         metadata.regDtm = first.sysRegDtm || '-';
@@ -1247,6 +1309,7 @@ const executeJobRequest = async (pose: PoseState, fileToUse: File | null, keyToU
   formData.append('userId', currentUserId.value);
   formData.append('aspectRatio', selectedAspectRatio.value);
   formData.append('imageSize', selectedQuality.value);
+  formData.append('model', selectedModel.value);
 
   // Debug: FormData contents
   console.log('[Studio] Sending Job Request:', Object.fromEntries(formData.entries()));
@@ -1550,6 +1613,11 @@ body:not(.light-mode) .modern-textarea::placeholder {
   border-color: var(--color-primary);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
 }
+.popover-trigger-btn.is-disabled {
+  opacity: 0.5; 
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .trigger-label {
   font-size: 0.8rem;
@@ -1581,11 +1649,20 @@ body:not(.light-mode) .modern-textarea::placeholder {
   gap: 1rem;
 }
 
-.ratio-popover { width: 440px; }
-.quality-popover { width: 140px; padding: 0.75rem; }
+.ratio-popover { 
+  width: 440px; 
+  left: 50%;
+  margin-left: -220px; /* Center relative to trigger button */
+}
+.quality-popover { 
+  width: 100%; 
+  min-width: 140px;
+  padding: 0.75rem; 
+  left: 0;
+}
 
 .popover-header {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 800;
   color: var(--color-text-muted);
   padding: 0 2px;
@@ -1647,6 +1724,10 @@ body:not(.light-mode) .modern-textarea::placeholder {
 .r4x3 .ratio-shape { width: 20px; height: 15px; }
 .r3x2 .ratio-shape { width: 21px; height: 14px; }
 .r2x3 .ratio-shape { width: 14px; height: 21px; }
+.r1x4 .ratio-shape { width: 7px; height: 28px; }
+.r4x1 .ratio-shape { width: 28px; height: 7px; }
+.r1x8 .ratio-shape { width: 4px; height: 32px; }
+.r8x1 .ratio-shape { width: 32px; height: 4px; }
 
 .ratio-text {
   font-size: 0.75rem;
@@ -1669,7 +1750,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--color-text-main);
   border-radius: 10px;
