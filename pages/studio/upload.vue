@@ -163,37 +163,6 @@
             </Transition>
           </div>
 
-          <!-- Aspect Ratio Selection (30%) -->
-          <div class="popover-wrapper" style="flex: 3;" v-click-outside="() => activePopover = null">
-            <button 
-              class="popover-trigger-btn" 
-              :class="{ active: activePopover === 'ratio' }"
-              @click.stop="activePopover = activePopover === 'ratio' ? null : 'ratio'"
-            >
-              <span class="trigger-label">{{ aspectRatios.find(r => r.value === selectedAspectRatio)?.label }}</span>
-              <ChevronDown :size="14" class="chevron" />
-            </button>
-            
-            <Transition name="popover-fade">
-              <div v-if="activePopover === 'ratio'" class="popover-content ratio-popover shadow-premium" @click.stop>
-                <div class="popover-header">화면 비율</div>
-                <div class="ratio-grid-v2">
-                  <button 
-                    v-for="r in aspectRatios" :key="r.id"
-                    class="ratio-card-v2"
-                    :class="{ active: selectedAspectRatio === r.value }"
-                    @click="selectedAspectRatio = r.value; activePopover = null"
-                  >
-                    <div class="ratio-icon-box" :class="r.id">
-                      <div class="ratio-shape"></div>
-                    </div>
-                    <span class="ratio-text">{{ r.label }}</span>
-                  </button>
-                </div>
-              </div>
-            </Transition>
-          </div>
-
           <!-- Quality Selection (30%) -->
           <div class="popover-wrapper" style="flex: 3;" v-click-outside="() => activePopover = null">
             <button 
@@ -218,6 +187,37 @@
                   >
                     <span>{{ q.label }}</span>
                     <Check v-if="selectedQuality === q.value" :size="14" />
+                  </button>
+                </div>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- Aspect Ratio Selection (30%) - Moved to third -->
+          <div class="popover-wrapper" style="flex: 3;" v-click-outside="() => activePopover = null">
+            <button 
+              class="popover-trigger-btn" 
+              :class="{ active: activePopover === 'ratio' }"
+              @click.stop="activePopover = activePopover === 'ratio' ? null : 'ratio'"
+            >
+              <span class="trigger-label">{{ aspectRatios.find(r => r.value === selectedAspectRatio)?.label }}</span>
+              <ChevronDown :size="14" class="chevron" />
+            </button>
+            
+            <Transition name="popover-fade">
+              <div v-if="activePopover === 'ratio'" class="popover-content ratio-popover shadow-premium" @click.stop>
+                <div class="popover-header">화면 비율</div>
+                <div class="ratio-grid-v2">
+                  <button 
+                    v-for="r in aspectRatios" :key="r.id"
+                    class="ratio-card-v2"
+                    :class="{ active: selectedAspectRatio === r.value }"
+                    @click="selectedAspectRatio = r.value; activePopover = null"
+                  >
+                    <div class="ratio-icon-box" :class="r.id">
+                      <div class="ratio-shape"></div>
+                    </div>
+                    <span class="ratio-text">{{ r.label }}</span>
                   </button>
                 </div>
               </div>
@@ -377,8 +377,33 @@
                     <span class="meta-value">{{ currentMetadata.aspectRatio || '-' }}</span>
                   </div>
                   <div class="meta-item">
-                    <span class="meta-label">출력 해상도</span>
+                    <span class="meta-label">요청 해상도</span>
                     <span class="meta-value">{{ currentMetadata.imageSize || '-' }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">실제 해상도</span>
+                    <span class="meta-value">
+                      <template v-if="actualImageMeta.width > 0">
+                        {{ actualImageMeta.width }} x {{ actualImageMeta.height }}
+                      </template>
+                      <template v-else>
+                        계산 중...
+                      </template>
+                    </span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">파일 크기</span>
+                    <span class="meta-value">
+                      <template v-if="actualImageMeta.sizeKb > 0">
+                        {{ actualImageMeta.sizeKb >= 1024 ? (actualImageMeta.sizeKb / 1024).toFixed(2) + ' MB' : actualImageMeta.sizeKb + ' KB' }}
+                      </template>
+                      <template v-else-if="actualImageMeta.sizeKb === -1">
+                        알 수 없음
+                      </template>
+                      <template v-else>
+                        계산 중...
+                      </template>
+                    </span>
                   </div>
                   <div class="meta-item">
                     <span class="meta-label">요청 사용자</span>
@@ -586,7 +611,7 @@ const qualityOptions = computed(() => {
     { label: '4K', value: '4K' },
   ];
   if (selectedModel.value === 'gemini-3.1-flash-image-preview') {
-    return [{ label: '512', value: '512' }, ...base];
+    return [{ label: '0.5k', value: '512' }, ...base];
   }
   return base;
 });
@@ -628,6 +653,12 @@ const isImageViewerOpen = ref(false);
 const isExtraZoomed = ref(false);
 const zoomOrigin = ref('50% 50%');
 
+const actualImageMeta = reactive({
+  width: 0,
+  height: 0,
+  sizeKb: 0
+});
+
 const handleZoom = (e: MouseEvent) => {
   if (!isExtraZoomed.value) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -640,10 +671,44 @@ const handleZoom = (e: MouseEvent) => {
   }
 };
 
-watch(isImageViewerOpen, (val) => {
+watch(isImageViewerOpen, async (val) => {
   if (!val) {
     isExtraZoomed.value = false;
     zoomOrigin.value = '50% 50%';
+    actualImageMeta.width = 0;
+    actualImageMeta.height = 0;
+    actualImageMeta.sizeKb = 0;
+  } else {
+    // When opening, fetch actual image dimensions and size
+    const targetUrl = viewingHistoryUrl.value || displayImageUrl.value;
+    if (targetUrl) {
+      // Fetch dimensions
+      const img = new Image();
+      img.onload = () => {
+        actualImageMeta.width = img.width;
+        actualImageMeta.height = img.height;
+      };
+      img.src = targetUrl;
+
+      // Fetch file size using the backend API to bypass CORS
+      try {
+        const s3Key = extractS3Key(targetUrl);
+        if (s3Key && s3Key.startsWith('http') === false) {
+          const res = await fetch(`${apiBase}/api/studio/file-size?key=${encodeURIComponent(s3Key)}`);
+          if (res.ok) {
+            const data = await res.json();
+            actualImageMeta.sizeKb = data.sizeKb; // from API (already converted to KB, or -1 for error)
+          } else {
+            actualImageMeta.sizeKb = -1;
+          }
+        } else {
+          actualImageMeta.sizeKb = -1;
+        }
+      } catch (e) {
+        console.warn('Could not fetch image file size from API', e);
+        actualImageMeta.sizeKb = -1; // error flag
+      }
+    }
   }
 });
 
@@ -983,6 +1048,16 @@ const historyList = computed(() => {
 });
 
 const currentMetadata = computed(() => {
+  // Specifically viewing an image in the modal, use its metadata
+  if (viewingHistoryUrl.value) {
+    const matchedSlide = historyList.value.find(h => h.url === viewingHistoryUrl.value);
+    if (matchedSlide) return matchedSlide;
+    
+    // Fallback: check cumulative history directly just in case
+    const meta = cumulativeHistory.value.find(h => h.url === viewingHistoryUrl.value);
+    if (meta) return meta;
+  }
+
   // Try to get metadata from the currently viewed history slide
   const currentSlide = historyList.value[currentSlideIndex.value];
   if (currentSlide && currentSlide.url) {
@@ -1518,7 +1593,7 @@ onUnmounted(() => stopPolling());
   gap: 0.75rem; 
 }
 .custom-header-row { display: flex; align-items: center; justify-content: space-between; }
-.group-title { font-size: 0.9rem; font-weight: 700; color: var(--color-text-main); }
+.group-title { font-size: 0.9rem; font-weight: 700; color: #888; }
 
 .modern-select-wrapper { 
   position: relative; 
@@ -1603,19 +1678,24 @@ body:not(.light-mode) .metadata-group {
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
-.meta-item {
+.metadata-group .meta-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.85rem;
 }
-.meta-label {
-  color: var(--color-text-muted);
+.metadata-group .meta-label {
+  color: #888;
   font-weight: 600;
+  display: inline;
+  margin-bottom: 0;
+  text-transform: none;
+  letter-spacing: normal;
 }
-.meta-value {
-  color: var(--color-text-main);
+.metadata-group .meta-value {
+  color: #888;
   font-weight: 700;
+  font-size: 0.85rem;
 }
 
 .pose-loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; }
@@ -1764,8 +1844,8 @@ body:not(.light-mode) .modern-textarea::placeholder {
 
 .ratio-popover { 
   width: 440px; 
-  left: 50%;
-  margin-left: -220px; /* Center relative to trigger button */
+  right: 0;
+  left: auto;
 }
 .quality-popover { 
   width: 100%; 
@@ -2464,7 +2544,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.meta-label {
+.meta-section .meta-label {
   display: block;
   font-size: 0.7rem;
   font-weight: 500;
@@ -2479,7 +2559,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   flex-direction: column;
 }
 
-.meta-value {
+.meta-section .meta-value {
   font-size: 0.85rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.95);
@@ -2497,7 +2577,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   gap: 20px;
 }
 
-.meta-item {
+.meta-section .meta-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
