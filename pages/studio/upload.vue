@@ -1653,9 +1653,16 @@ const generateAllPoses = async () => {
     poseGroupId.value = crypto.randomUUID();
   }
 
-  for (const id of selectedPoseIds.value) {
+  for (let i = 0; i < selectedPoseIds.value.length; i++) {
+    const id = selectedPoseIds.value[i];
     const pose = filteredPoses.value.find(p => p.id === id);
     if (!pose) continue;
+
+    // 첫 번째 포즈인 경우 해당 포즈 탭으로 화면 전환
+    if (i === 0) {
+      viewingPoseId.value = id;
+    }
+    
     pose.retryCount = 0; 
     
     // Determine which file or key to use for this pose
