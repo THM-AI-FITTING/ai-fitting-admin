@@ -71,35 +71,72 @@
           </div>
 
           <div class="pose-grid-v2">
-            <div 
-              v-for="p in filteredPoses" 
-              :key="p.id" 
-              class="pose-card-v2"
-              :class="{ 
-                'active': selectedPoseIds.includes(p.id),
-                'disabled-card': !isPoseClickable(p.type) || allGenerating
-              }"
-              @click="(isPoseClickable(p.type) && !allGenerating) ? togglePoseSelection(p.id) : null"
-              @mouseenter="setHoveredPose($event, p)"
-              @mouseleave="clearHoveredPose"
-            >
-              <div class="pose-thumb-v2">
-                <img :src="p.customPersonUrl || getSampleImageUrl(p.id)" :alt="p.name" />
-                <button 
-                  class="model-change-btn" 
-                  :disabled="allGenerating"
-                  @click.stop="modalActivePoseId = p.id; isCustomModelModalOpen = true"
-                >
-                  <span>모델 변경</span>
-                </button>
-                <div v-if="p.status === 'processing' || p.status === 'pending'" class="pose-loading-overlay">
-                  <div class="mini-spinner"></div>
-                </div>
-                <div v-if="p.status === 'done'" class="pose-done-check">
-                  <Check :size="16" />
+            <template v-if="currentGender !== 'custom'">
+              <div 
+                v-for="p in filteredPoses" 
+                :key="p.id" 
+                class="pose-card-v2"
+                :class="{ 
+                  'active': selectedPoseIds.includes(p.id),
+                  'disabled-card': !isPoseClickable(p.type) || allGenerating
+                }"
+                @click="(isPoseClickable(p.type) && !allGenerating) ? togglePoseSelection(p.id) : null"
+                @mouseenter="setHoveredPose($event, p)"
+                @mouseleave="clearHoveredPose"
+              >
+                <div class="pose-thumb-v2">
+                  <img :src="p.customPersonUrl || getSampleImageUrl(p.id)" :alt="p.name" />
+                  <button 
+                    class="model-change-btn" 
+                    :disabled="allGenerating"
+                    @click.stop="modalActivePoseId = p.id; isCustomModelModalOpen = true"
+                  >
+                    <span>모델 변경</span>
+                  </button>
+                  <div v-if="p.status === 'processing' || p.status === 'pending'" class="pose-loading-overlay">
+                    <div class="mini-spinner"></div>
+                  </div>
+                  <div v-if="p.status === 'done'" class="pose-done-check">
+                    <Check :size="16" />
+                  </div>
                 </div>
               </div>
-            </div>
+            </template>
+
+            <!-- Custom Model Upload UI -->
+            <template v-else>
+              <div v-if="customModels.length === 0" 
+                   class="custom-upload-full"
+                   :class="{ 'dragging': modalIsDragging }"
+                   @dragover.prevent="modalIsDragging = true"
+                   @dragleave.prevent="modalIsDragging = false"
+                   @drop.prevent="onCustomDrop($event); modalIsDragging = false"
+                   @click="customFileInput?.click()">
+                <input type="file" ref="customFileInput" hidden accept="image/*" multiple @change="handleCustomModelUpload">
+                <div class="upload-icon-circle"><Upload :size="32" /></div>
+                <p class="upload-msg">이미지를 클릭 또는 드래그해서 업로드하세요.</p>
+                <p class="upload-sub">JPG/PNG형식, 파일크기 20MB이하</p>
+              </div>
+
+              <div v-else class="custom-model-grid">
+                <div v-for="m in customModels" :key="m.id" 
+                     class="custom-model-card"
+                     :class="{ 'active': selectedCustomModelId === m.id, 'generating': allGenerating }"
+                     @click="!allGenerating ? selectedCustomModelId = m.id : null"
+                     @mouseenter="setHoveredCustom($event, m)"
+                     @mouseleave="clearHoveredPose">
+                  <img :src="m.url" class="custom-model-img" />
+                  <button v-if="!allGenerating" class="remove-custom-btn" @click.stop="removeCustomModel(m.id)">
+                    <X :size="12" />
+                  </button>
+                </div>
+                <!-- Add Button -->
+                <div class="custom-model-add-card" @click="!allGenerating ? customFileInput?.click() : null">
+                  <input type="file" ref="customFileInput" hidden accept="image/*" multiple @change="handleCustomModelUpload">
+                  <Upload :size="24" />
+                </div>
+              </div>
+            </template>
           </div>
         </section>
 
@@ -135,7 +172,7 @@
         <!-- Ratio & Quality Selection Area (Popover Style) -->
         <div class="generation-options-v2 row-layout">
           <!-- Model Selection (40%) -->
-          <div class="popover-wrapper" style="flex: 4;" v-click-outside="() => activePopover = null">
+          <div class="popover-wrapper" style="flex: 5;" v-click-outside="() => activePopover = null">
             <button 
               class="popover-trigger-btn" 
               :class="{ active: activePopover === 'model' }"
@@ -247,14 +284,14 @@
             <div class="slider-header-v2">
               <div class="pose-view-selector-v2">
                 <button 
-                  v-for="p in filteredPoses" 
+                  v-for="p in uniquePoseTabs" 
                   :key="p.id"
                   class="view-tab"
                   :class="{ active: viewingPoseId === p.id }"
                   :disabled="!hasHistoryOrIsDone(p.id)"
                   @click="viewingPoseId = p.id"
                 >
-                  {{ p.id }}
+                  {{ p.name }}
                 </button>
               </div>
             </div>
@@ -286,7 +323,7 @@
                               <Search :size="18" />
                               <span class="btn-label">확대</span>
                             </button>
-                            <button class="hover-action-btn wand-btn" @click.stop="setAsBaseImage(item.url)">
+                            <button class="hover-action-btn wand-btn" @click.stop="setAsBaseImage(item)">
                               <Wand2 :size="18" />
                               <span class="btn-label">재생성</span>
                             </button>
@@ -296,10 +333,18 @@
                             </button>
                           </div>
                         </template>
-                        <div v-else class="inline-loader-content">
-                          <div class="radiant-loader mini"></div>
-                          <p class="loader-text-mini">디자인 중...</p>
-                        </div>
+                        <template v-else-if="item.status === 'processing' || item.status === 'pending'">
+                          <div class="inline-loader-content">
+                            <div class="radiant-loader mini"></div>
+                            <p class="loader-text-mini">디자인 중...</p>
+                          </div>
+                        </template>
+                        <template v-else-if="item.status === 'error'">
+                          <div class="error-card-content">
+                            <AlertCircle :size="32" class="error-icon" />
+                            <p class="error-text">생성 실패</p>
+                          </div>
+                        </template>
                       </div>
                     </div>
                   </div>
@@ -554,7 +599,7 @@ const currentUserId = computed(() => ownerCookie.value || 'dev');
 // --- State ---
 const currentGender = ref('female');
 const promptText = ref('');
-const selectedAspectRatio = ref('3:4');
+const selectedAspectRatio = ref('2:3');
 const selectedQuality = ref('1K');
 const selectedModel = ref('gemini-2.5-flash-image');
 const activePopover = ref<string | null>(null);
@@ -590,6 +635,7 @@ const aspectRatios = computed(() => {
     { id: 'r4x3', label: '4:3', value: '4:3' },
     { id: 'r3x2', label: '3:2', value: '3:2' },
     { id: 'r2x3', label: '2:3', value: '2:3' },
+    { id: 'r1x1_custom', label: '1:1 (맞춤형)', value: '1:1' },
   ];
 
   if (selectedModel.value === 'gemini-3.1-flash-image-preview') {
@@ -712,6 +758,87 @@ watch(isImageViewerOpen, async (val) => {
   }
 });
 
+// --- Custom Model State ---
+const customModels = ref<{ id: string, url: string, file?: File, s3Key?: string }[]>([]);
+const selectedCustomModelId = ref<string | null>(null);
+const customFileInput = ref<HTMLInputElement | null>(null);
+
+const resizeImage = (file: File, maxDim: number = 1024): Promise<{ file: File, url: string }> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const resizedFile = new File([blob], file.name, { type: 'image/jpeg' });
+            resolve({ file: resizedFile, url: canvas.toDataURL('image/jpeg', 0.9) });
+          } else {
+            resolve({ file, url: e.target?.result as string });
+          }
+        }, 'image/jpeg', 0.9);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+const handleCustomModelUpload = (event: Event) => {
+  const files = (event.target as HTMLInputElement).files;
+  if (files && files.length > 0) {
+    processCustomFiles(Array.from(files));
+  }
+};
+
+const onCustomDrop = (event: DragEvent) => {
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    processCustomFiles(Array.from(files));
+  }
+};
+
+const processCustomFiles = async (files: File[]) => {
+  for (const file of files) {
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('파일 크기는 20MB 이하만 가능합니다.');
+      continue;
+    }
+    const { file: resizedFile, url } = await resizeImage(file);
+    const id = crypto.randomUUID();
+    customModels.value.push({ id, url, file: resizedFile });
+    if (!selectedCustomModelId.value) {
+      selectedCustomModelId.value = id;
+    }
+  }
+};
+
+const removeCustomModel = (id: string) => {
+  const idx = customModels.value.findIndex(m => m.id === id);
+  if (idx > -1) {
+    customModels.value.splice(idx, 1);
+    if (selectedCustomModelId.value === id) {
+      selectedCustomModelId.value = customModels.value.length > 0 ? customModels.value[0].id : null;
+    }
+  }
+};
+
 // --- Custom Model Modal State ---
 const isCustomModelModalOpen = ref(false);
 const modalActivePoseId = ref<string | null>(null);
@@ -779,25 +906,13 @@ const hoverTooltipStyle = reactive({
 
 const setHoveredPose = (event: MouseEvent, pose: PoseState) => {
   if (allGenerating.value) return;
-  
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-  
-  // 툴팁 예상 높이 (너비 280px 기준 이미지 약 392px + 하단 텍스트 60px)
   const tooltipHeight = 460;
   const viewportHeight = window.innerHeight;
-  
   let topPos = rect.top;
-  
-  // 화면 하단을 벗어날 경우 위로 끌어올림
-  if (topPos + tooltipHeight > viewportHeight - 20) {
-    topPos = viewportHeight - tooltipHeight - 20;
-  }
-  // 화면 상단을 벗어날 경우 아래로 내림
-  if (topPos < 20) {
-    topPos = 20;
-  }
-  
-  // 툴팁 위치 지정 (카드 오른쪽)
+  if (topPos + tooltipHeight > viewportHeight - 20) topPos = viewportHeight - tooltipHeight - 20;
+  if (topPos < 20) topPos = 20;
+
   hoverTooltipStyle.top = `${topPos}px`;
   hoverTooltipStyle.left = `${rect.right + 20}px`;
   
@@ -806,6 +921,26 @@ const setHoveredPose = (event: MouseEvent, pose: PoseState) => {
     name: pose.name,
     type: pose.type,
     url: pose.customPersonUrl || getSampleImageUrl(pose.id)
+  };
+};
+
+const setHoveredCustom = (event: MouseEvent, model: { id: string, url: string, file?: File, s3Key?: string }) => {
+  if (allGenerating.value) return;
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const tooltipHeight = 460;
+  const viewportHeight = window.innerHeight;
+  let topPos = rect.top;
+  if (topPos + tooltipHeight > viewportHeight - 20) topPos = viewportHeight - tooltipHeight - 20;
+  if (topPos < 20) topPos = 20;
+
+  hoverTooltipStyle.top = `${topPos}px`;
+  hoverTooltipStyle.left = `${rect.right + 20}px`;
+  
+  hoveredPoseData.value = {
+    id: 'Custom',
+    name: '맞춤형 모델',
+    type: 'CUSTOM',
+    url: model.url
   };
 };
 
@@ -933,7 +1068,7 @@ const prevSlide = () => {
 const genderTabs = [
   { id: 'female', name: '여성' },
   { id: 'male', name: '남성' },
-  { id: 'mannequin', name: '마네킹' }
+  { id: 'custom', name: '맞춤형' }
 ];
 
 const productTypeOptions = [
@@ -993,10 +1128,19 @@ const poseStates = reactive<PoseState[]>([
   { id: 'B', name: '마네킹 B', type: 'front', gender: 'mannequin', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
   { id: 'C', name: '마네킹 C', type: 'back', gender: 'mannequin', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
   { id: 'D', name: '마네킹 D', type: 'back', gender: 'mannequin', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
+  { id: 'E', name: '맞춤형', type: 'CUSTOM' as any, gender: 'custom', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
 ]);
 
 const topInput = ref<HTMLInputElement | null>(null);
 const bottomInput = ref<HTMLInputElement | null>(null);
+
+const uniquePoseTabs = computed(() => {
+  const ids = ['A', 'B', 'C', 'D', 'E'];
+  return ids.map(id => ({
+    id,
+    name: id === 'E' ? '맞춤형' : id
+  }));
+});
 
 // --- Computed ---
 const filteredPoses = computed(() => poseStates.filter(p => p.gender === currentGender.value));
@@ -1015,7 +1159,9 @@ const historyList = computed(() => {
       aspectRatio: h.aspectRatio,
       imageSize: h.imageSize,
       userId: h.userId,
-      sysRegDtm: h.sysRegDtm
+      sysRegDtm: h.sysRegDtm,
+      gender: h.gender,
+      poseId: h.poseId
     }));
 
   // Add loading card if current viewing pose is generating
@@ -1088,9 +1234,10 @@ const allGenerating = computed(() => poseStates.some(p => p.status === 'pending'
 
 const isReadyForPoseSelection = computed(() => !!topImage.value || !!bottomImage.value);
 
-const isPoseClickable = (poseType: 'front' | 'back') => {
+const isPoseClickable = (poseType: 'front' | 'back' | 'CUSTOM') => {
   if (poseType === 'front') return !!topImage.value;
   if (poseType === 'back') return !!bottomImage.value;
+  if (poseType === 'CUSTOM') return (!!topImage.value || !!bottomImage.value) && !!selectedCustomModelId.value;
   return false;
 };
 
@@ -1102,11 +1249,29 @@ const hasHistoryOrIsDone = (poseId: string) => {
 };
 
 // --- Watchers ---
-watch(currentGender, () => {
+watch(currentGender, (newGender) => {
   // const firstPose = filteredPoses.value[0];
   selectedPoseIds.value = [];
+  
+  // 맞춤형 모드일 경우 선택된 모델이 있으면 포즈 E 자동 선택
+  if (newGender === 'custom' && selectedCustomModelId.value) {
+    selectedPoseIds.value = ['E'];
+  }
+  
   // viewingPoseId.value = firstPose.id; // Keep viewingPoseId to prevent jumping
   viewingHistoryUrl.value = null;
+});
+
+watch(selectedCustomModelId, (newId) => {
+  if (currentGender.value === 'custom') {
+    if (newId) {
+      if (!selectedPoseIds.value.includes('E')) {
+        selectedPoseIds.value = ['E'];
+      }
+    } else {
+      selectedPoseIds.value = selectedPoseIds.value.filter(id => id !== 'E');
+    }
+  }
 });
 
 watch(() => historyList.value.length, (newLen, oldLen) => {
@@ -1130,17 +1295,17 @@ watch(viewingPoseId, () => {
 });
 
 // --- Actions ---
-const handleFileUpload = (event: Event, type: 'top' | 'bottom') => {
+const handleFileUpload = async (event: Event, type: 'top' | 'bottom') => {
   const file = (event.target as HTMLInputElement).files?.[0];
   if (file) {
-    if (type === 'top') selectedFiles.top = file;
-    else selectedFiles.bottom = file;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (type === 'top') topImage.value = e.target?.result as string;
-      else bottomImage.value = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    const { file: resizedFile, url } = await resizeImage(file);
+    if (type === 'top') {
+      selectedFiles.top = resizedFile;
+      topImage.value = url;
+    } else {
+      selectedFiles.bottom = resizedFile;
+      bottomImage.value = url;
+    }
   }
 };
 
@@ -1167,11 +1332,51 @@ const getSampleImageUrl = (poseId: string) => {
   return `https://ai-fitting-studio-images.s3.ap-northeast-2.amazonaws.com/sample/${currentGender.value}-${selectedProductType.value}-${typeStr}_${poseId.toLowerCase()}.jpg`;
 };
 
-const setAsBaseImage = (url: string) => {
-  const pose = poseStates.find(p => p.id === viewingPoseId.value && p.gender === currentGender.value);
-  if (pose) {
-    pose.customPersonUrl = url;
-    showToast(`${pose.id} 포즈의 베이스 사진으로 설정되었습니다.`);
+const urlToFile = async (url: string, filename: string): Promise<File> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new File([blob], filename, { type: 'image/jpeg' });
+};
+
+const setAsBaseImage = async (item: any) => {
+  const url = item.url;
+  const sourceGender = item.gender;
+  const sourcePoseId = item.poseId;
+
+  if (sourceGender === 'custom' || sourcePoseId === 'E') {
+    // 맞춤형 이미지인 경우
+    currentGender.value = 'custom';
+    const s3Key = extractS3Key(url);
+    if (s3Key && !s3Key.startsWith('http')) {
+      const id = crypto.randomUUID();
+      customModels.value.push({ id, url, s3Key });
+      selectedCustomModelId.value = id;
+      showToast('생성 결과가 맞춤형 모델 리스트에 추가되었습니다.');
+      return;
+    }
+
+    try {
+      const file = await urlToFile(url, `custom-reuse-${Date.now()}.jpg`);
+      const { file: resizedFile, url: dataUrl } = await resizeImage(file);
+      const id = crypto.randomUUID();
+      customModels.value.push({ id, url: dataUrl, file: resizedFile });
+      selectedCustomModelId.value = id;
+      showToast('생성 결과가 맞춤형 모델 리스트에 추가되었습니다.');
+    } catch (e) {
+      console.error('Failed to re-use image:', e);
+      showToast('이미지 리플레이스에 실패했습니다.');
+    }
+  } else {
+    // 일반 모델(여성/남성) 이미지인 경우
+    if (sourceGender) {
+      currentGender.value = sourceGender;
+    }
+    
+    const pose = poseStates.find(p => p.id === sourcePoseId && p.gender === sourceGender);
+    if (pose) {
+      pose.customPersonUrl = url;
+      showToast(`${sourceGender === 'female' ? '여성' : '남성'} ${pose.id} 포즈의 베이스 사진으로 설정되었습니다.`);
+    }
   }
 };
 
@@ -1243,7 +1448,8 @@ const loadJobData = async () => {
         
         const first = jobList[0];
         poseGroupId.value = groupId.value as any;
-        currentGender.value = (first.gender || 'female').toLowerCase();
+        const g = (first.gender || 'female').toLowerCase();
+        currentGender.value = g === 'custom' ? 'custom' : g;
         selectedProductType.value = first.productType || 'base';
         selectedModel.value = first.model || 'gemini-2.5-flash-image';
         promptText.value = first.prompt || '';
@@ -1255,13 +1461,24 @@ const loadJobData = async () => {
         jobList.forEach((job: any) => {
           const jobGender = (job.gender || currentGender.value).toLowerCase();
           const jobSlot = (job.slot || '').toUpperCase();
+
+          // Populate customModels if it's a custom person image
+          if (job.personImageUrl && jobGender === 'custom') {
+            const exists = customModels.value.find(m => m.url === job.personImageUrl || m.s3Key === job.personImageKey);
+            if (!exists) {
+              customModels.value.push({
+                id: crypto.randomUUID(),
+                url: job.personImageUrl,
+                s3Key: job.personImageKey
+              });
+            }
+          }
           
           if (job.productImageUrl) {
-            if (jobSlot === 'A' || jobSlot === 'B') {
+            if (jobSlot === 'A' || jobSlot === 'B' || jobSlot === 'E') {
               topImage.value = job.productImageUrl;
               productImageKeys.top = job.productImageKey;
-            }
-            if (jobSlot === 'C' || jobSlot === 'D') {
+            } else if (jobSlot === 'C' || jobSlot === 'D') {
               bottomImage.value = job.productImageUrl;
               productImageKeys.bottom = job.productImageKey;
             }
@@ -1301,6 +1518,11 @@ const loadJobData = async () => {
         const firstWithResult = poseStates.find(p => p.gender === currentGender.value && p.resultUrl);
         if (firstWithResult) {
           viewingPoseId.value = firstWithResult.id;
+        }
+
+        // Auto-select first custom model if in custom mode
+        if (currentGender.value === 'custom' && customModels.value.length > 0) {
+          selectedCustomModelId.value = customModels.value[0].id;
         }
 
         if (allGenerating.value) startPolling();
@@ -1484,15 +1706,31 @@ const executeJobRequest = async (pose: PoseState, fileToUse: File | null, keyToU
   formData.append('poseGroupId', poseGroupId.value);
   formData.append('slot', pose.id);
   formData.append('gender', currentGender.value);
-  formData.append('productType', selectedProductType.value);
   
+  let personKey = '';
+  if (currentGender.value === 'custom') {
+    formData.set('gender', 'CUSTOM');
+    const m = customModels.value.find(m => m.id === selectedCustomModelId.value);
+    if (m) {
+      if (m.file) {
+        formData.append('person', m.file);
+      } else if (m.s3Key) {
+        personKey = m.s3Key;
+      }
+    }
+  } else {
+    personKey = extractS3Key(pose.customPersonUrl) || `sample/${currentGender.value}-${selectedProductType.value}-${pose.type === 'front' ? 'front' : 'rear'}_${pose.id.toLowerCase()}.jpg`;
+  }
+
+  formData.append('personImageKey', personKey);
+  formData.append('productType', selectedProductType.value);
+
   if (fileToUse) {
     formData.append('product', fileToUse);
   } else if (keyToUse) {
     formData.append('productImageKey', keyToUse);
   }
 
-  formData.append('personImageKey', extractS3Key(pose.customPersonUrl) || `sample/${currentGender.value}-${selectedProductType.value}-${pose.type === 'front' ? 'front' : 'rear'}_${pose.id.toLowerCase()}.jpg`);
   formData.append('prompt', promptText.value);
   formData.append('userId', currentUserId.value);
   formData.append('aspectRatio', selectedAspectRatio.value);
@@ -2271,7 +2509,8 @@ body:not(.light-mode) .modern-textarea::placeholder {
   border: 1px solid var(--color-border);
 }
 .view-tab {
-  width: 36px;
+  min-width: 36px;
+  padding: 0 10px;
   height: 36px;
   border-radius: 8px;
   border: none;
@@ -2911,5 +3150,124 @@ body:not(.light-mode) .modern-textarea::placeholder {
   0% { transform: scale(0.98); }
   50% { transform: scale(1.02); }
   100% { transform: scale(1); }
+}
+
+/* Custom Model UI Styles */
+.custom-upload-full {
+  grid-column: span 4;
+  height: 200px;
+  border: 2px dashed var(--color-border);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--color-bg-alt);
+  transition: all 0.3s ease;
+  gap: 12px;
+}
+
+.custom-upload-full:hover, .custom-upload-full.dragging {
+  border-color: var(--color-primary);
+  background: var(--color-bg-header);
+}
+
+.upload-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.upload-msg {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0;
+}
+
+.upload-sub {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.custom-model-grid {
+  grid-column: span 4;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.custom-model-card {
+  aspect-ratio: 1/1.4;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid transparent;
+  cursor: pointer;
+  background: var(--color-bg-alt);
+  transition: all 0.2s;
+}
+
+.custom-model-card.active {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(92, 124, 250, 0.2);
+}
+
+.custom-model-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-custom-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.remove-custom-btn:hover {
+  background: rgba(255, 0, 0, 0.7);
+}
+
+.custom-model-add-card {
+  aspect-ratio: 1/1.4;
+  border-radius: 12px;
+  border: 2px dashed var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.custom-model-add-card:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-bg-header);
+}
+
+.custom-model-card.generating {
+  opacity: 0.6;
+  pointer-events: none;
 }
 </style>
