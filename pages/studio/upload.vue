@@ -12,7 +12,12 @@
           
           <div class="upload-slots-row">
             <!-- Top Upload -->
-            <div class="upload-area-v2" :class="{ 'is-disabled': allGenerating }" @click="(topImage || allGenerating) ? null : topInput?.click()">
+            <div class="upload-area-v2" 
+                 :class="{ 'is-disabled': allGenerating, 'dragging': topIsDragging }" 
+                 @click="(topImage || allGenerating) ? null : topInput?.click()"
+                 @dragover.prevent="topIsDragging = true"
+                 @dragleave.prevent="topIsDragging = false"
+                 @drop.prevent="onMainDrop($event, 'top')">
               <input type="file" ref="topInput" hidden accept="image/*" @change="handleFileUpload($event, 'top')">
               <template v-if="topImage">
                 <div class="image-preview-v2">
@@ -22,12 +27,18 @@
               </template>
               <div v-else class="upload-placeholder-v2">
                 <div class="placeholder-icon"><Upload :size="20" /></div>
-                <span>전면 사진 업로드</span>
+                <span>이미지를 클릭 또는 드래그해서<br>업로드하세요</span>
+                <span class="sub-hint">(전면 사진)</span>
               </div>
             </div>
 
             <!-- Bottom Upload -->
-            <div class="upload-area-v2" :class="{ 'is-disabled': allGenerating }" @click="(bottomImage || allGenerating) ? null : bottomInput?.click()">
+            <div class="upload-area-v2" 
+                 :class="{ 'is-disabled': allGenerating, 'dragging': bottomIsDragging }" 
+                 @click="(bottomImage || allGenerating) ? null : bottomInput?.click()"
+                 @dragover.prevent="bottomIsDragging = true"
+                 @dragleave.prevent="bottomIsDragging = false"
+                 @drop.prevent="onMainDrop($event, 'bottom')">
               <input type="file" ref="bottomInput" hidden accept="image/*" @change="handleFileUpload($event, 'bottom')">
               <template v-if="bottomImage">
                 <div class="image-preview-v2">
@@ -37,7 +48,8 @@
               </template>
               <div v-else class="upload-placeholder-v2">
                 <div class="placeholder-icon"><Upload :size="20" /></div>
-                <span>후면 사진 업로드</span>
+                <span>이미지를 클릭 또는 드래그해서<br>업로드하세요</span>
+                <span class="sub-hint">(후면 사진)</span>
               </div>
             </div>
           </div>
@@ -99,7 +111,7 @@
                    @click="customFileInput?.click()">
                 <input type="file" ref="customFileInput" hidden accept="image/*" multiple @change="handleCustomModelUpload">
                 <div class="upload-icon-circle"><Upload :size="32" /></div>
-                <p class="upload-msg">이미지를 클릭 또는 드래그해서 업로드하세요.</p>
+                <p class="upload-msg">이미지를 클릭 또는 드래그해서<br>업로드하세요.</p>
                 <p class="upload-sub">JPG/PNG형식, 파일크기 20MB이하</p>
               </div>
 
@@ -116,7 +128,7 @@
                   </button>
                 </div>
                 <!-- Add Button -->
-                <div class="custom-model-add-card" @click="!allGenerating ? customFileInput?.click() : null">
+                <div class="custom-model-add-card" :class="{ 'is-disabled': allGenerating }" @click="!allGenerating ? customFileInput?.click() : null">
                   <input type="file" ref="customFileInput" hidden accept="image/*" multiple @change="handleCustomModelUpload">
                   <Upload :size="24" />
                 </div>
@@ -155,12 +167,13 @@
 
       <div class="sidebar-footer-v2">
         <!-- Ratio & Quality Selection Area (Popover Style) -->
-        <div class="generation-options-v2 row-layout">
+        <div class="generation-options-v2 row-layout" :class="{ 'is-disabled': allGenerating }">
           <!-- Model Selection (40%) -->
           <div class="popover-wrapper" style="flex: 5;" v-click-outside="() => activePopover = null">
             <button 
               class="popover-trigger-btn" 
-              :class="{ active: activePopover === 'model' }"
+              :class="{ active: activePopover === 'model', 'is-disabled': allGenerating }"
+              :disabled="allGenerating"
               @click.stop="activePopover = activePopover === 'model' ? null : 'model'"
             >
               <span class="trigger-label">{{ modelOptions.find(m => m.value === selectedModel)?.label }}</span>
@@ -189,8 +202,8 @@
           <div class="popover-wrapper" style="flex: 3;" v-click-outside="() => activePopover = null">
             <button 
               class="popover-trigger-btn" 
-              :class="{ active: activePopover === 'quality', 'is-disabled': isQualityDisabled }"
-              :disabled="isQualityDisabled"
+              :class="{ active: activePopover === 'quality', 'is-disabled': isQualityDisabled || allGenerating }"
+              :disabled="isQualityDisabled || allGenerating"
               @click.stop="activePopover = activePopover === 'quality' ? null : 'quality'"
             >
               <span class="trigger-label">{{ qualityOptions.find(q => q.value === selectedQuality)?.label || (isQualityDisabled ? '-' : selectedQuality) }}</span>
@@ -219,7 +232,8 @@
           <div class="popover-wrapper" style="flex: 3;" v-click-outside="() => activePopover = null">
             <button 
               class="popover-trigger-btn" 
-              :class="{ active: activePopover === 'ratio' }"
+              :class="{ active: activePopover === 'ratio', 'is-disabled': allGenerating }"
+              :disabled="allGenerating"
               @click.stop="activePopover = activePopover === 'ratio' ? null : 'ratio'"
             >
               <span class="trigger-label">{{ aspectRatios.find(r => r.value === selectedAspectRatio)?.label }}</span>
@@ -544,7 +558,7 @@
                 
                 <!-- Pagination for Modal -->
                 <div v-if="modalTotalPages > 1" class="modal-pagination">
-                  <button class="modal-nav-btn" :disabled="modalCurrentPage === 0" @click="prevModalPage">
+                  <button class="modal-nav-btn" :disabled="modalCurrentPage === 0 || allGenerating" @click="prevModalPage">
                     <ChevronLeft :size="16" />
                   </button>
                   <div class="modal-dots">
@@ -552,7 +566,7 @@
                           class="modal-dot" :class="{ active: p - 1 === modalCurrentPage }"
                           @click="modalCurrentPage = p - 1"></span>
                   </div>
-                  <button class="modal-nav-btn" :disabled="modalCurrentPage === modalTotalPages - 1" @click="nextModalPage">
+                  <button class="modal-nav-btn" :disabled="modalCurrentPage === modalTotalPages - 1 || allGenerating" @click="nextModalPage">
                     <ChevronRight :size="16" />
                   </button>
                 </div>
@@ -638,6 +652,9 @@ const topImage = ref<string | null>(null);
 const bottomImage = ref<string | null>(null);
 const selectedFiles = reactive<{ top: File | null, bottom: File | null }>({ top: null, bottom: null });
 const productImageKeys = reactive<{ top: string | null, bottom: string | null }>({ top: null, bottom: null });
+
+const topIsDragging = ref(false);
+const bottomIsDragging = ref(false);
 
 const aspectRatios = computed(() => {
   const base = [
@@ -825,6 +842,34 @@ const onCustomDrop = (event: DragEvent) => {
   const files = event.dataTransfer?.files;
   if (files && files.length > 0) {
     processCustomFiles(Array.from(files));
+  }
+};
+
+const onMainDrop = (event: DragEvent, type: 'top' | 'bottom') => {
+  if (type === 'top') topIsDragging.value = false;
+  else bottomIsDragging.value = false;
+  
+  if (allGenerating.value) return;
+  
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    const file = files[0];
+    if (file.type.startsWith('image/')) {
+       handleSingleFileUpload(file, type);
+    } else {
+       showToast('이미지 파일만 업로드 가능합니다.');
+    }
+  }
+};
+
+const handleSingleFileUpload = async (file: File, type: 'top' | 'bottom') => {
+  const { file: resizedFile, url } = await resizeImage(file);
+  if (type === 'top') {
+    selectedFiles.top = resizedFile;
+    topImage.value = url;
+  } else {
+    selectedFiles.bottom = resizedFile;
+    bottomImage.value = url;
   }
 };
 
@@ -1947,8 +1992,18 @@ onUnmounted(() => stopPolling());
   overflow: hidden;
 }
 
-.upload-area-v2:hover { background: var(--color-bg-header); border-color: var(--color-primary); }
-.upload-placeholder-v2 { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #888; font-size: 0.75rem; font-weight: 600; }
+.upload-area-v2:hover, .upload-area-v2.dragging { background: var(--color-bg-header); border-color: var(--color-primary); }
+.upload-area-v2.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed !important;
+  filter: grayscale(0.5);
+}
+.upload-area-v2.is-disabled img {
+  filter: brightness(0.8);
+}
+.upload-placeholder-v2 { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #888; font-size: 0.75rem; font-weight: 600; text-align: center; padding: 0 10px; }
+.sub-hint { font-size: 0.7rem; color: #aaa; font-weight: 400; margin-top: 2px; }
 .image-preview-v2 { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .preview-img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .remove-btn-v2 { position: absolute; top: 4px; right: 4px; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: 50%; padding: 3px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: var(--color-text-main); }
@@ -2123,8 +2178,19 @@ body:not(.light-mode) .modern-textarea::placeholder {
 }
 .popover-trigger-btn.is-disabled {
   opacity: 0.5; 
-  cursor: not-allowed;
+  cursor: not-allowed !important;
   pointer-events: none;
+}
+.generation-options-v2.is-disabled {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.custom-model-control-btn:disabled,
+.custom-model-add-card.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed !important;
 }
 
 .trigger-label {
