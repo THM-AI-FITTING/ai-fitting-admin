@@ -1948,7 +1948,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   /* width: 100%; */
   /* height: 100%; */
   max-width: 100%; 
-  max-height: 100%; 
+  max-height: 620px; 
   object-fit: contain;
   border-radius: 8px; 
   border: 1px solid var(--color-border); 
