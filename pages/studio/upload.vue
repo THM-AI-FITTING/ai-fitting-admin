@@ -336,19 +336,60 @@
     <Teleport to="body">
       <Transition name="fade-fast">
         <div v-if="isImageViewerOpen" class="image-viewer-overlay" @click="isImageViewerOpen = false">
-          <div class="image-viewer-content" @click.stop>
-            <button class="viewer-close-btn" @click="isImageViewerOpen = false"><X :size="24" /></button>
-            <div 
-              class="viewer-img-container" 
-              :class="{ 'is-zoomed': isExtraZoomed }" 
-              @click="handleZoom($event)"
-              :style="{ transformOrigin: zoomOrigin }"
-            >
-              <img 
-                v-if="viewingHistoryUrl || displayImageUrl" 
-                :src="viewingHistoryUrl || displayImageUrl || undefined" 
-                class="viewer-img" 
-              />
+          <div class="image-viewer-layout" @click.stop>
+            <!-- Close Button -->
+            <button class="viewer-close-btn" @click="isImageViewerOpen = false"><X :size="28" /></button>
+            <div class="image-viewer-main">
+              <div 
+                class="viewer-img-container" 
+                :class="{ 'is-zoomed': isExtraZoomed }" 
+                @click="handleZoom($event)"
+                :style="{ transformOrigin: zoomOrigin }"
+              >
+                <img 
+                  v-if="viewingHistoryUrl || displayImageUrl" 
+                  :src="viewingHistoryUrl || displayImageUrl || undefined" 
+                  class="viewer-img" 
+                />
+              </div>
+            </div>
+            
+            <!-- Side Panel Metadata -->
+            <div v-if="currentMetadata" class="viewer-side-panel">
+              <div class="side-panel-header">
+                <sparkles :size="16" class="text-indigo-400" />
+                <span>데이터 정보</span>
+              </div>
+              <div class="meta-section">
+                <div class="meta-row model-info">
+                  <span class="meta-label">생성 모델</span>
+                  <div class="meta-value-group">
+                    <span class="meta-value">{{ getModelLabel(currentMetadata.model) }}</span>
+                    <small class="model-id">{{ currentMetadata.model }}</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="meta-section">
+                <div class="meta-grid">
+                  <div class="meta-item">
+                    <span class="meta-label">화면 비율</span>
+                    <span class="meta-value">{{ currentMetadata.aspectRatio || '-' }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">출력 해상도</span>
+                    <span class="meta-value">{{ currentMetadata.imageSize || '-' }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">요청 사용자</span>
+                    <span class="meta-value">{{ currentMetadata.userId || '-' }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">생성 일시</span>
+                    <span class="meta-value">{{ formatDate(currentMetadata.sysRegDtm || '') }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -616,6 +657,11 @@ interface HistoryItem {
   gender: string;
   url: string;
   requestId: string;
+  model?: string;
+  aspectRatio?: string;
+  imageSize?: string;
+  userId?: string;
+  sysRegDtm?: string;
 }
 const cumulativeHistory = ref<HistoryItem[]>([]);
 
@@ -899,20 +945,64 @@ const historyList = computed(() => {
       status: 'done' as JobStatus,
       current: viewingHistoryUrl.value 
         ? h.url === viewingHistoryUrl.value 
-        : h.url === displayImageUrl.value 
+        : h.url === displayImageUrl.value,
+      model: h.model,
+      aspectRatio: h.aspectRatio,
+      imageSize: h.imageSize,
+      userId: h.userId,
+      sysRegDtm: h.sysRegDtm
     }));
 
   // Add loading card if current viewing pose is generating
   if (selectedPose.value && (selectedPose.value.status === 'pending' || selectedPose.value.status === 'processing')) {
     list.push({
       url: '',
-      status: selectedPose.value.status,
-      current: false
-    });
+      status: selectedPose.value.status as JobStatus,
+      current: false,
+      // Metadata placeholders for loader
+      model: selectedModel.value,
+      aspectRatio: selectedAspectRatio.value,
+      imageSize: selectedQuality.value,
+      userId: currentUserId.value,
+      sysRegDtm: '-'
+    } as any);
   }
 
-  return list;
+  return list.map(item => {
+    // If metadata is missing from the item itself (e.g. some legacy ones), try to find in cumulative history
+    const meta = cumulativeHistory.value.find(h => h.url === item.url);
+    return {
+      ...item,
+      model: item.model || meta?.model || '-',
+      aspectRatio: item.aspectRatio || meta?.aspectRatio || '-',
+      imageSize: item.imageSize || meta?.imageSize || '-',
+      userId: item.userId || meta?.userId || '-',
+      sysRegDtm: item.sysRegDtm || meta?.sysRegDtm || '-'
+    };
+  });
 });
+
+const currentMetadata = computed(() => {
+  // Try to get metadata from the currently viewed history slide
+  const currentSlide = historyList.value[currentSlideIndex.value];
+  if (currentSlide && currentSlide.url) {
+    return currentSlide;
+  }
+  
+  // Fallback to selectedPose info if it's currently showing done
+  if (selectedPose.value?.status === 'done' && selectedPose.value.resultUrl) {
+    const meta = cumulativeHistory.value.find(h => h.url === selectedPose.value.resultUrl);
+    if (meta) return meta;
+  }
+  
+  return null;
+});
+
+const getModelLabel = (modelValue: string | undefined) => {
+  if (!modelValue) return '-';
+  const option = modelOptions.find(o => o.value === modelValue);
+  return option ? option.label : modelValue;
+};
 
 const displayImageUrl = computed(() => {
   if (selectedPose.value?.status === 'done') return selectedPose.value.resultUrl;
@@ -1084,7 +1174,9 @@ const loadJobData = async () => {
         promptText.value = first.prompt || '';
         metadata.userId = first.userId || '-';
         metadata.regDtm = first.sysRegDtm || '-';
-
+        
+        // Clear history before repopulating in detail mode to avoid duplicates if needed
+        // but cumulativeHistory might have existing ones, so we check existence
         jobList.forEach((job: any) => {
           const jobGender = (job.gender || currentGender.value).toLowerCase();
           const jobSlot = (job.slot || '').toUpperCase();
@@ -1119,7 +1211,12 @@ const loadJobData = async () => {
                 poseId: pose.id,
                 gender: pose.gender,
                 url: job.resultUrl,
-                requestId: job.requestId
+                requestId: job.requestId,
+                model: job.model,
+                aspectRatio: job.aspectRatio,
+                imageSize: job.imageSize || job.resolution,
+                userId: job.userId,
+                sysRegDtm: job.sysRegDtm
               });
             }
           }
@@ -1152,10 +1249,21 @@ const formatDate = (dateStr: string) => {
   } catch (e) { return dateStr; }
 };
 
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && isImageViewerOpen.value) {
+    isImageViewerOpen.value = false;
+  }
+};
+
 onMounted(() => {
   if (isDetailMode.value) {
     loadJobData();
   }
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
 });
 
 // --- API Logic ---
@@ -1205,7 +1313,12 @@ const fetchJobStatuses = async () => {
                   poseId: pose.id,
                   gender: pose.gender,
                   url: job.resultUrl,
-                  requestId: job.requestId
+                  requestId: job.requestId,
+                  model: job.model,
+                  aspectRatio: job.aspectRatio,
+                  imageSize: job.imageSize || job.resolution,
+                  userId: job.userId,
+                  sysRegDtm: job.sysRegDtm
                 });
               }
             }
@@ -2296,13 +2409,115 @@ body:not(.light-mode) .modern-textarea::placeholder {
   align-items: center;
   justify-content: center;
 }
-.image-viewer-content {
+.image-viewer-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
   position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
+}
+
+.image-viewer-main {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.viewer-side-panel {
+  width: 320px;
+  background: rgba(10, 10, 15, 0.7);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  padding: 40px 24px;
+  gap: 24px;
+  color: #fff;
+  z-index: 101;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.side-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
+}
+
+.meta-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meta-row.model-info {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.meta-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.meta-value-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.model-id {
+  font-size: 0.7rem;
+  color: rgba(92, 124, 250, 0.7);
+  font-family: monospace;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Responsive side panel */
+@media (max-width: 1024px) {
+  .image-viewer-layout {
+    flex-direction: column;
+  }
+  .viewer-side-panel {
+    width: 100%;
+    height: auto;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+  }
+  .meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 .viewer-img-container {
   cursor: zoom-in;
@@ -2324,24 +2539,30 @@ body:not(.light-mode) .modern-textarea::placeholder {
 }
 .viewer-close-btn {
   position: absolute;
-  top: -40px;
-  right: -40px;
-  background: transparent;
-  border: none;
+  top: 24px;
+  left: 24px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
   color: white;
   cursor: pointer;
-  padding: 8px;
-  transition: transform 0.2s;
+  padding: 10px;
+  transition: all 0.2s;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .viewer-close-btn:hover {
   transform: scale(1.1);
+  background: rgba(0, 0, 0, 0.6);
 }
 @media (max-width: 768px) {
   .viewer-close-btn {
-    top: 10px;
-    right: 10px;
-    background: rgba(0,0,0,0.5);
-    border-radius: 50%;
+    top: 16px;
+    left: 16px;
   }
 }
 
