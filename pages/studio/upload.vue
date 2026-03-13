@@ -47,18 +47,6 @@
         <section class="control-group">
           <div class="group-header custom-header-row">
             <label class="group-title">모델 포즈 선택</label>
-            <div class="modern-select-wrapper" :class="{ 'is-disabled': allGenerating }">
-              <select 
-                v-model="selectedProductType" 
-                class="modern-select-v2"
-                :disabled="allGenerating"
-              >
-                <option v-for="opt in productTypeOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
-              </select>
-              <ChevronDown class="select-icon-v2" :size="14" />
-            </div>
           </div>
 
           <div class="pose-tabs-v2" :class="{ 'is-disabled': allGenerating }">
@@ -74,18 +62,18 @@
             <template v-if="currentGender !== 'custom'">
               <div 
                 v-for="p in filteredPoses" 
-                :key="p.id" 
+                :key="p.id + '-' + p.productType" 
                 class="pose-card-v2"
                 :class="{ 
-                  'active': selectedPoseIds.includes(p.id),
+                  'active': selectedPoseIds.includes(p.id + '-' + p.productType),
                   'disabled-card': !isPoseClickable(p.type) || allGenerating
                 }"
-                @click="(isPoseClickable(p.type) && !allGenerating) ? togglePoseSelection(p.id) : null"
+                @click="(isPoseClickable(p.type) && !allGenerating) ? togglePoseSelection(p.id + '-' + p.productType) : null"
                 @mouseenter="setHoveredPose($event, p)"
                 @mouseleave="clearHoveredPose"
               >
                 <div class="pose-thumb-v2">
-                  <img :src="p.customPersonUrl || getSampleImageUrl(p.id)" :alt="p.name" />
+                  <img :src="p.customPersonUrl || getSampleImageUrl(p.id, p.productType)" :alt="p.name" />
                   <button 
                     class="model-change-btn" 
                     :disabled="allGenerating"
@@ -95,9 +83,6 @@
                   </button>
                   <div v-if="p.status === 'processing' || p.status === 'pending'" class="pose-loading-overlay">
                     <div class="mini-spinner"></div>
-                  </div>
-                  <div v-if="p.status === 'done'" class="pose-done-check">
-                    <Check :size="16" />
                   </div>
                 </div>
               </div>
@@ -384,11 +369,11 @@
           <div class="image-viewer-layout" @click.stop>
             <!-- Close Button -->
             <button class="viewer-close-btn" @click="isImageViewerOpen = false"><X :size="28" /></button>
-            <div class="image-viewer-main">
+            <div class="image-viewer-main" @click="isImageViewerOpen = false">
               <div 
                 class="viewer-img-container" 
                 :class="{ 'is-zoomed': isExtraZoomed }" 
-                @click="handleZoom($event)"
+                @click.stop="handleZoom($event)"
                 :style="{ transformOrigin: zoomOrigin }"
               >
                 <img 
@@ -404,6 +389,24 @@
               <div class="side-panel-header">
                 <sparkles :size="16" class="text-indigo-400" />
                 <span>데이터 정보</span>
+              </div>
+
+              <!-- Source Previews -->
+              <div v-if="currentMetadata?.productImageUrl || currentMetadata?.personImageUrl" class="source-previews-section">
+                <div v-if="currentMetadata.productImageUrl" 
+                     class="source-preview-item"
+                     @mouseenter="setHoveredSource($event, currentMetadata.productImageUrl, '상품 이미지')"
+                     @mouseleave="clearHoveredPose">
+                  <img :src="currentMetadata.productImageUrl" />
+                  <span>상품</span>
+                </div>
+                <div v-if="currentMetadata.personImageUrl" 
+                     class="source-preview-item"
+                     @mouseenter="setHoveredSource($event, currentMetadata.personImageUrl, '인물 이미지')"
+                     @mouseleave="clearHoveredPose">
+                  <img :src="currentMetadata.personImageUrl" />
+                  <span>인물</span>
+                </div>
               </div>
               <div class="meta-section">
                 <div class="meta-row model-info">
@@ -457,6 +460,12 @@
                   <div class="meta-item">
                     <span class="meta-label">생성 일시</span>
                     <span class="meta-value">{{ formatDate(currentMetadata.sysRegDtm || '') }}</span>
+                  </div>
+                  <div class="meta-item full-width mt-4">
+                    <span class="meta-label">입력 프롬프트</span>
+                    <div class="prompt-display">
+                      {{ currentMetadata.prompt || '입력된 프롬프트 없음' }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -569,7 +578,12 @@
             </div>
             <div class="preview-info">
               <span class="pose-name">{{ hoveredPoseData.name }}</span>
-              <span class="pose-desc">{{ hoveredPoseData.type === 'front' ? '전면 포즈' : '후면 포즈' }}</span>
+              <span class="pose-desc">
+                <template v-if="hoveredPoseData.type === 'front'">전면 포즈</template>
+                <template v-else-if="hoveredPoseData.type === 'back'">후면 포즈</template>
+                <template v-else-if="hoveredPoseData.type === 'CUSTOM' || hoveredPoseData.type === 'SOURCE'">원본 데이터</template>
+                <template v-else>상세 정보</template>
+              </span>
             </div>
           </div>
         </div>
@@ -854,6 +868,9 @@ interface HistoryItem {
   imageSize?: string;
   userId?: string;
   sysRegDtm?: string;
+  prompt?: string;
+  productImageUrl?: string;
+  personImageUrl?: string;
 }
 const cumulativeHistory = ref<HistoryItem[]>([]);
 
@@ -862,13 +879,13 @@ const activePoseHistory = computed(() => {
   
   const defaultModel = {
     name: '기본 모델',
-    url: getSampleImageUrl(modalActivePoseId.value),
+    url: getSampleImageUrl(modalActivePoseId.value, (filteredPoses.value.find(p => p.id === modalActivePoseId.value)?.productType || 'base')),
     isDefault: true,
     isNew: false
   };
 
   const history = cumulativeHistory.value
-    .filter(h => h.poseId === modalActivePoseId.value) // Removed gender filter
+    .filter(h => h.poseId === modalActivePoseId.value && h.gender === currentGender.value)
     .map((h, idx) => ({
       name: `${h.gender === 'female' ? '여성' : h.gender === 'male' ? '남성' : '마네킹'} 생성 결과 ${idx + 1}`,
       url: h.url,
@@ -920,7 +937,7 @@ const setHoveredPose = (event: MouseEvent, pose: PoseState) => {
     id: pose.id,
     name: pose.name,
     type: pose.type,
-    url: pose.customPersonUrl || getSampleImageUrl(pose.id)
+    url: pose.customPersonUrl || getSampleImageUrl(pose.id, pose.productType)
   };
 };
 
@@ -941,6 +958,29 @@ const setHoveredCustom = (event: MouseEvent, model: { id: string, url: string, f
     name: '맞춤형 모델',
     type: 'CUSTOM',
     url: model.url
+  };
+};
+
+const setHoveredSource = (event: MouseEvent, url: string, name: string) => {
+  if (allGenerating.value) return;
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const tooltipHeight = 460;
+  const tooltipWidth = 280;
+  const viewportHeight = window.innerHeight;
+  
+  let topPos = rect.top;
+  if (topPos + tooltipHeight > viewportHeight - 20) topPos = viewportHeight - tooltipHeight - 20;
+  if (topPos < 20) topPos = 20;
+
+  // Since this is on the right side (Viewer Side Panel), show tooltip on the left
+  hoverTooltipStyle.top = `${topPos}px`;
+  hoverTooltipStyle.left = `${rect.left - tooltipWidth - 20}px`;
+  
+  hoveredPoseData.value = {
+    id: 'Source',
+    name: name,
+    type: 'SOURCE',
+    url: url
   };
 };
 
@@ -1071,14 +1111,6 @@ const genderTabs = [
   { id: 'custom', name: '맞춤형' }
 ];
 
-const productTypeOptions = [
-  { label: '전체의상', value: 'base' },
-  { label: '상의', value: 'top' },
-  { label: '하의', value: 'bottom' }
-];
-
-const selectedProductType = ref('base');
-
 // --- Toast Notification ---
 const toastVisible = ref(false);
 const toastMsg = ref('');
@@ -1105,30 +1137,41 @@ type JobStatus = 'idle' | 'pending' | 'processing' | 'done' | 'error' | 'failed'
 interface PoseState {
   id: string;
   name: string;
-  type: 'front' | 'back';
+  type: 'front' | 'back' | 'CUSTOM';
   gender: string;
   status: JobStatus;
   resultUrl: string | null;
   requestId: string | null;
   customPersonUrl: string | null;
-  retryCount: number; // Added for auto-retry logic
+  retryCount: number;
+  productType: string;
 }
 
-// 4 Poses (A, B, C, D) for each gender
+// 4 Poses (A, B, C, D) for each gender across all cloth types
 const poseStates = reactive<PoseState[]>([
-  { id: 'A', name: '여성 A', type: 'front', gender: 'female', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'B', name: '여성 B', type: 'front', gender: 'female', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'C', name: '여성 C', type: 'back', gender: 'female', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'D', name: '여성 D', type: 'back', gender: 'female', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'A', name: '남성 A', type: 'front', gender: 'male', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'B', name: '남성 B', type: 'front', gender: 'male', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'C', name: '남성 C', type: 'back', gender: 'male', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'D', name: '남성 D', type: 'back', gender: 'male', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'A', name: '마네킹 A', type: 'front', gender: 'mannequin', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'B', name: '마네킹 B', type: 'front', gender: 'mannequin', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'C', name: '마네킹 C', type: 'back', gender: 'mannequin', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'D', name: '마네킹 D', type: 'back', gender: 'mannequin', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
-  { id: 'E', name: '맞춤형', type: 'CUSTOM' as any, gender: 'custom', status: 'idle', resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0 },
+  // FEMALE
+  ...['base', 'top', 'bottom'].flatMap(pt => [
+    { id: 'A', name: `여성 A (${pt})`, type: 'front' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'B', name: `여성 B (${pt})`, type: 'front' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'C', name: `여성 C (${pt})`, type: 'back' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'D', name: `여성 D (${pt})`, type: 'back' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+  ]),
+  // MALE
+  ...['base', 'top', 'bottom'].flatMap(pt => [
+    { id: 'A', name: `남성 A (${pt})`, type: 'front' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'B', name: `남성 B (${pt})`, type: 'front' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'C', name: `남성 C (${pt})`, type: 'back' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'D', name: `남성 D (${pt})`, type: 'back' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+  ]),
+  // MANNEQUIN
+  ...['base', 'top', 'bottom'].flatMap(pt => [
+    { id: 'A', name: `마네킹 A (${pt})`, type: 'front' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'B', name: `마네킹 B (${pt})`, type: 'front' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'C', name: `마네킹 C (${pt})`, type: 'back' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+    { id: 'D', name: `마네킹 D (${pt})`, type: 'back' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
+  ]),
+  // CUSTOM
+  { id: 'E', name: '맞춤형', type: 'CUSTOM' as const, gender: 'custom', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: 'base' },
 ]);
 
 const topInput = ref<HTMLInputElement | null>(null);
@@ -1161,7 +1204,10 @@ const historyList = computed(() => {
       userId: h.userId,
       sysRegDtm: h.sysRegDtm,
       gender: h.gender,
-      poseId: h.poseId
+      poseId: h.poseId,
+      prompt: h.prompt,
+      productImageUrl: h.productImageUrl,
+      personImageUrl: h.personImageUrl
     }));
 
   // Add loading card if current viewing pose is generating
@@ -1175,7 +1221,10 @@ const historyList = computed(() => {
       aspectRatio: selectedAspectRatio.value,
       imageSize: selectedQuality.value,
       userId: currentUserId.value,
-      sysRegDtm: '-'
+      sysRegDtm: '-',
+      prompt: '',
+      productImageUrl: '',
+      personImageUrl: ''
     } as any);
   }
 
@@ -1188,7 +1237,10 @@ const historyList = computed(() => {
       aspectRatio: item.aspectRatio || meta?.aspectRatio || '-',
       imageSize: item.imageSize || meta?.imageSize || '-',
       userId: item.userId || meta?.userId || '-',
-      sysRegDtm: item.sysRegDtm || meta?.sysRegDtm || '-'
+      sysRegDtm: item.sysRegDtm || meta?.sysRegDtm || '-',
+      prompt: item.prompt || meta?.prompt || '',
+      productImageUrl: item.productImageUrl || meta?.productImageUrl || '',
+      personImageUrl: item.personImageUrl || meta?.personImageUrl || ''
     };
   });
 });
@@ -1235,9 +1287,11 @@ const allGenerating = computed(() => poseStates.some(p => p.status === 'pending'
 const isReadyForPoseSelection = computed(() => !!topImage.value || !!bottomImage.value);
 
 const isPoseClickable = (poseType: 'front' | 'back' | 'CUSTOM') => {
+  if (currentGender.value === 'custom') {
+    return (!!topImage.value || !!bottomImage.value) && !!selectedCustomModelId.value;
+  }
   if (poseType === 'front') return !!topImage.value;
   if (poseType === 'back') return !!bottomImage.value;
-  if (poseType === 'CUSTOM') return (!!topImage.value || !!bottomImage.value) && !!selectedCustomModelId.value;
   return false;
 };
 
@@ -1255,7 +1309,7 @@ watch(currentGender, (newGender) => {
   
   // 맞춤형 모드일 경우 선택된 모델이 있으면 포즈 E 자동 선택
   if (newGender === 'custom' && selectedCustomModelId.value) {
-    selectedPoseIds.value = ['E'];
+    selectedPoseIds.value = ['E-base'];
   }
   
   // viewingPoseId.value = firstPose.id; // Keep viewingPoseId to prevent jumping
@@ -1265,11 +1319,11 @@ watch(currentGender, (newGender) => {
 watch(selectedCustomModelId, (newId) => {
   if (currentGender.value === 'custom') {
     if (newId) {
-      if (!selectedPoseIds.value.includes('E')) {
-        selectedPoseIds.value = ['E'];
+      if (!selectedPoseIds.value.includes('E-base')) {
+        selectedPoseIds.value = ['E-base'];
       }
     } else {
-      selectedPoseIds.value = selectedPoseIds.value.filter(id => id !== 'E');
+      selectedPoseIds.value = selectedPoseIds.value.filter(id => id !== 'E-base');
     }
   }
 });
@@ -1314,22 +1368,24 @@ const removeImage = (type: 'top' | 'bottom') => {
   else { bottomImage.value = null; selectedFiles.bottom = null; }
 };
 
-const togglePoseSelection = (id: string) => {
-  const pose = filteredPoses.value.find(p => p.id === id);
+const togglePoseSelection = (uniqueId: string) => {
+  const [id, pt] = uniqueId.split('-');
+  const pose = filteredPoses.value.find(p => p.id === id && p.productType === pt);
   if (!pose || !isPoseClickable(pose.type)) return;
   
-  const idx = selectedPoseIds.value.indexOf(id);
+  const idx = selectedPoseIds.value.indexOf(uniqueId);
   if (idx > -1) {
     selectedPoseIds.value.splice(idx, 1);
   } else {
-    selectedPoseIds.value.push(id);
+    selectedPoseIds.value.push(uniqueId);
   }
 };
 
-const getSampleImageUrl = (poseId: string) => {
-  const pose = filteredPoses.value.find(p => p.id === poseId);
-  const typeStr = pose?.type === 'front' ? 'front' : 'rear';
-  return `https://ai-fitting-studio-images.s3.ap-northeast-2.amazonaws.com/sample/${currentGender.value}-${selectedProductType.value}-${typeStr}_${poseId.toLowerCase()}.jpg`;
+const getSampleImageUrl = (poseId: string, poseProductType?: string) => {
+  const pose = filteredPoses.value.find(p => p.id === poseId && (!poseProductType || p.productType === poseProductType));
+  if (!pose) return '';
+  const typeStr = pose.type === 'front' ? 'front' : 'rear';
+  return `https://ai-fitting-studio-images.s3.ap-northeast-2.amazonaws.com/sample/${currentGender.value}-${pose.productType}-${typeStr}_${poseId.toLowerCase()}.jpg`;
 };
 
 const urlToFile = async (url: string, filename: string): Promise<File> => {
@@ -1450,7 +1506,6 @@ const loadJobData = async () => {
         poseGroupId.value = groupId.value as any;
         const g = (first.gender || 'female').toLowerCase();
         currentGender.value = g === 'custom' ? 'custom' : g;
-        selectedProductType.value = first.productType || 'base';
         selectedModel.value = first.model || 'gemini-2.5-flash-image';
         promptText.value = first.prompt || '';
         metadata.userId = first.userId || '-';
@@ -1484,7 +1539,7 @@ const loadJobData = async () => {
             }
           }
 
-          const idx = poseStates.findIndex(p => p.id.toUpperCase() === jobSlot && p.gender.toLowerCase() === jobGender);
+          const idx = poseStates.findIndex(p => p.id.toUpperCase() === jobSlot && p.gender.toLowerCase() === jobGender && p.productType === (job.productType || 'base'));
           if (idx > -1) {
             const pose = poseStates[idx];
             const s = job.status?.toLowerCase();
@@ -1508,7 +1563,10 @@ const loadJobData = async () => {
                 aspectRatio: job.aspectRatio,
                 imageSize: job.imageSize || job.resolution,
                 userId: job.userId,
-                sysRegDtm: job.sysRegDtm
+                sysRegDtm: job.sysRegDtm,
+                prompt: job.prompt,
+                productImageUrl: job.productImageUrl,
+                personImageUrl: job.personImageUrl
               });
             }
           }
@@ -1615,7 +1673,10 @@ const fetchJobStatuses = async () => {
                   aspectRatio: job.aspectRatio,
                   imageSize: job.imageSize || job.resolution,
                   userId: job.userId,
-                  sysRegDtm: job.sysRegDtm
+                  sysRegDtm: job.sysRegDtm,
+                  prompt: job.prompt,
+                  productImageUrl: job.productImageUrl,
+                  personImageUrl: job.personImageUrl
                 });
               }
             }
@@ -1654,9 +1715,10 @@ const generateAllPoses = async () => {
   }
 
   for (let i = 0; i < selectedPoseIds.value.length; i++) {
-    const id = selectedPoseIds.value[i];
-    const pose = filteredPoses.value.find(p => p.id === id);
-    if (!pose) continue;
+    const uniqueId = selectedPoseIds.value[i];
+    const [id, pt] = uniqueId.split('-');
+    const pose = filteredPoses.value.find(p => p.id === id && p.productType === pt);
+    if (!pose || !isPoseClickable(pose.type)) continue;
 
     // 첫 번째 포즈인 경우 해당 포즈 탭으로 화면 전환
     if (i === 0) {
@@ -1726,11 +1788,11 @@ const executeJobRequest = async (pose: PoseState, fileToUse: File | null, keyToU
       }
     }
   } else {
-    personKey = extractS3Key(pose.customPersonUrl) || `sample/${currentGender.value}-${selectedProductType.value}-${pose.type === 'front' ? 'front' : 'rear'}_${pose.id.toLowerCase()}.jpg`;
+    personKey = extractS3Key(pose.customPersonUrl) || `sample/${currentGender.value}-${pose.productType}-${pose.type === 'front' ? 'front' : 'rear'}_${pose.id.toLowerCase()}.jpg`;
   }
 
   formData.append('personImageKey', personKey);
-  formData.append('productType', selectedProductType.value);
+  formData.append('productType', pose.productType);
 
   if (fileToUse) {
     formData.append('product', fileToUse);
@@ -1897,7 +1959,16 @@ onUnmounted(() => stopPolling());
 .pose-tabs-v2.is-disabled { opacity: 0.6; pointer-events: none; }
 .pose-tab:disabled { cursor: not-allowed; }
 
-.pose-grid-v2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+.pose-grid-v2 { 
+  display: grid; 
+  grid-template-columns: repeat(4, 1fr); 
+  gap: 0.5rem; 
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.pose-grid-v2::-webkit-scrollbar { width: 4px; }
+.pose-grid-v2::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
 .pose-thumb-v2 { aspect-ratio: 1/1.4; background: var(--color-bg-alt); border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; border: 2px solid transparent; }
 .pose-card-v2.active .pose-thumb-v2 { border-color: #5c7cfa; }
 .disabled-card {
@@ -1944,7 +2015,6 @@ body:not(.light-mode) .metadata-group {
 }
 
 .pose-loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; }
-.pose-done-check { position: absolute; bottom: 4px; right: 4px; background: #5c7cfa; color: white; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .mini-spinner { width: 16px; height: 16px; border: 2px solid #ddd; border-top-color: #5c7cfa; border-radius: 50%; animation: spin 0.8s linear infinite; }
 
 .pose-expand-btn {
@@ -3085,7 +3155,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
 /* Pose Preview Tooltip */
 .pose-preview-tooltip {
   position: fixed;
-  z-index: 9999;
+  z-index: 10002;
   pointer-events: none;
   filter: drop-shadow(0 20px 40px rgba(0,0,0,0.25));
 }
@@ -3210,7 +3280,12 @@ body:not(.light-mode) .modern-textarea::placeholder {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
+.custom-model-grid::-webkit-scrollbar { width: 4px; }
+.custom-model-grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
 
 .custom-model-card {
   aspect-ratio: 1/1.4;
@@ -3276,5 +3351,73 @@ body:not(.light-mode) .modern-textarea::placeholder {
 .custom-model-card.generating {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/* Image Viewer Side Panel Enhancements */
+.source-previews-section {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+}
+
+.source-preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.source-preview-item:hover {
+  transform: translateY(-2px);
+}
+
+.source-preview-item img {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.source-preview-item span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.meta-item.full-width {
+  grid-column: span 1;
+}
+
+.prompt-display {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  max-height: 120px;
+  overflow-y: auto;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.prompt-display::-webkit-scrollbar {
+  width: 4px;
+}
+
+.prompt-display::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.mt-4 {
+  margin-top: 1rem;
 }
 </style>
