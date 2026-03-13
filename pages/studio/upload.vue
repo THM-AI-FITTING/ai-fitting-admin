@@ -115,7 +115,7 @@
             placeholder="예: 실크 소재의 느낌을 살려줘, 배경을 더 밝게 해줘 등"
           ></textarea>
         </section>
-        ㅁ
+        
         <!-- Basic Info (Only in Detail Mode) -->
         <section v-if="isDetailMode" class="control-group metadata-group">
           <div class="metadata-grid">
