@@ -115,7 +115,7 @@
                 <p class="upload-sub">JPG/PNG형식, 파일크기 20MB이하</p>
               </div>
 
-              <div v-else class="custom-model-grid">
+              <template v-else>
                 <div v-for="m in customModels" :key="m.id" 
                      class="custom-model-card"
                      :class="{ 'active': selectedCustomModelId === m.id, 'generating': allGenerating }"
@@ -132,7 +132,7 @@
                   <input type="file" ref="customFileInput" hidden accept="image/*" multiple @change="handleCustomModelUpload">
                   <Upload :size="24" />
                 </div>
-              </div>
+              </template>
             </template>
           </div>
         </section>
@@ -2018,7 +2018,7 @@ onUnmounted(() => stopPolling());
   display: grid; 
   grid-template-columns: repeat(4, 1fr); 
   gap: 0.5rem; 
-  max-height: 200px;
+  max-height: 480px; /* 리스트가 너무 짧아 겹치지 않도록 높이 상향 */
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -3341,17 +3341,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   margin: 0;
 }
 
-.custom-model-grid {
-  grid-column: span 4;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-  max-height: 200px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-.custom-model-grid::-webkit-scrollbar { width: 4px; }
-.custom-model-grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+/* .custom-model-grid removed to stabilize layout */
 
 .custom-model-card {
   aspect-ratio: 1/1.4;
