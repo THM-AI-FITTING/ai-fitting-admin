@@ -1630,43 +1630,66 @@ const loadJobData = async () => {
             }
           }
 
-          const idx = poseStates.findIndex(p => p.id.toUpperCase() === jobSlot && p.gender.toLowerCase() === jobGender && p.productType === (job.productType || 'base'));
-          if (idx > -1) {
-            const pose = poseStates[idx];
-            const s = job.status?.toLowerCase();
-            if (s === 'success' || s === 'done' || s === 'completed') {
-              pose.status = 'done';
-            } else if (s === 'error' || s === 'failed' || s === 'blocked') {
-              pose.status = 'error';
-            } else {
-              pose.status = 'processing';
-            }
-            pose.resultUrl = job.resultUrl;
-            pose.requestId = job.requestId;
-            
-            if (job.resultUrl && !cumulativeHistory.value.find(h => h.requestId === job.requestId)) {
-              cumulativeHistory.value.push({
-                poseId: pose.id,
-                gender: pose.gender,
-                url: job.resultUrl,
-                requestId: job.requestId,
-                model: job.model,
-                aspectRatio: job.aspectRatio,
-                imageSize: job.imageSize || job.resolution,
-                userId: job.userId,
-                sysRegDtm: job.sysRegDtm,
-                prompt: job.prompt,
-                productImageUrl: job.productImageUrl,
-                personImageUrl: job.personImageUrl
-              });
-            }
+          let idx = poseStates.findIndex(p => p.id.toUpperCase() === jobSlot && p.gender.toLowerCase() === jobGender && p.productType === (job.productType || 'base'));
+          if (idx === -1) {
+            // Create a placeholder pose state if S3 sample is missing but job data exists
+            const newPose: PoseState = {
+              id: jobSlot,
+              name: `${jobGender === 'female' ? '여성' : jobGender === 'male' ? '남성' : '마네킹'} ${jobSlot} (${job.productType || 'base'})`,
+              type: (jobSlot === 'A' || jobSlot === 'B') ? 'front' : (jobSlot === 'E' ? 'CUSTOM' : 'back'),
+              gender: jobGender,
+              status: 'idle',
+              resultUrl: null,
+              requestId: null,
+              customPersonUrl: null,
+              retryCount: 0,
+              productType: job.productType || 'base'
+            };
+            poseStates.push(newPose);
+            idx = poseStates.length - 1;
+          }
+
+          const pose = poseStates[idx];
+          const s = job.status?.toLowerCase();
+          if (s === 'success' || s === 'done' || s === 'completed') {
+            pose.status = 'done';
+          } else if (s === 'error' || s === 'failed' || s === 'blocked') {
+            pose.status = 'error';
+          } else {
+            pose.status = 'processing';
+          }
+          pose.resultUrl = job.resultUrl;
+          pose.requestId = job.requestId;
+          
+          if (job.resultUrl && !cumulativeHistory.value.find(h => h.requestId === job.requestId)) {
+            cumulativeHistory.value.push({
+              poseId: pose.id,
+              gender: pose.gender,
+              url: job.resultUrl,
+              requestId: job.requestId,
+              model: job.model,
+              aspectRatio: job.aspectRatio,
+              imageSize: job.imageSize || job.resolution,
+              userId: job.userId,
+              sysRegDtm: job.sysRegDtm,
+              prompt: job.prompt,
+              productImageUrl: job.productImageUrl,
+              personImageUrl: job.personImageUrl
+            });
           }
         });
 
-        // Set initial viewing pose
-        const firstWithResult = poseStates.find(p => p.gender === currentGender.value && p.resultUrl);
-        if (firstWithResult) {
-          viewingPoseId.value = firstWithResult.id;
+        // Set initial viewing pose to the LATEST generated image
+        const latestWithResult = [...jobList].reverse().find(j => j.resultUrl);
+        if (latestWithResult) {
+          const finalGender = (latestWithResult.gender || 'female').toLowerCase();
+          currentGender.value = finalGender === 'custom' ? 'custom' : finalGender;
+          viewingPoseId.value = latestWithResult.slot.toUpperCase();
+        } else {
+          const firstWithResult = poseStates.find(p => p.gender === currentGender.value && p.resultUrl);
+          if (firstWithResult) {
+            viewingPoseId.value = firstWithResult.id;
+          }
         }
 
         // Auto-select first custom model if in custom mode
