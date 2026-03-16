@@ -1156,6 +1156,67 @@ const genderTabs = [
   { id: 'custom', name: '맞춤형' }
 ];
 
+// --- Dynamic Poses Logic ---
+const fetchPoses = async () => {
+  try {
+    const res = await fetch(`${apiBase}/api/studio/samples`);
+    if (res.ok) {
+      const keys: string[] = await res.json();
+      const dynamicPoses: PoseState[] = [];
+      
+      keys.forEach(key => {
+        // key format: sample/female-base-front_a.jpg
+        const filename = key.split('/').pop() || '';
+        const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+        const parts = nameWithoutExt.split('-');
+        
+        if (parts.length >= 3) {
+          const gender = parts[0].toLowerCase();
+          const pt = parts[1];
+          const suffix = parts[2]; // e.g. front_a or rear_a
+          
+          const suffixParts = suffix.split('_');
+          const direction = suffixParts[0].toLowerCase(); // front or rear
+          const poseId = suffixParts.length > 1 ? suffixParts[1].toUpperCase() : 'A';
+          
+          const genderName = gender === 'female' ? '여성' : gender === 'male' ? '남성' : '마네킹';
+          
+          dynamicPoses.push({
+            id: poseId,
+            name: `${genderName} ${poseId} (${pt})`,
+            type: direction === 'front' ? 'front' : 'back',
+            gender: gender,
+            status: 'idle',
+            resultUrl: null,
+            requestId: null,
+            customPersonUrl: null,
+            retryCount: 0,
+            productType: pt
+          });
+        }
+      });
+
+      // Add Custom item
+      dynamicPoses.push({ 
+        id: 'E', name: '맞춤형', type: 'CUSTOM' as const, gender: 'custom', 
+        status: 'idle' as JobStatus, resultUrl: null, requestId: null, 
+        customPersonUrl: null, retryCount: 0, productType: 'base' 
+      });
+
+      // Update poseStates
+      poseStates.splice(0, poseStates.length, ...dynamicPoses);
+      
+      // Update viewingPoseId if current one is not in the new list
+      if (!dynamicPoses.some(p => p.id === viewingPoseId.value && p.gender === currentGender.value)) {
+          const firstAvailable = dynamicPoses.find(p => p.gender === currentGender.value);
+          if (firstAvailable) viewingPoseId.value = firstAvailable.id;
+      }
+    }
+  } catch (e) {
+    console.error('[Studio] Failed to fetch dynamic poses:', e);
+  }
+};
+
 // --- Toast Notification ---
 const toastVisible = ref(false);
 const toastMsg = ref('');
@@ -1193,38 +1254,18 @@ interface PoseState {
 }
 
 // 4 Poses (A, B, C, D) for each gender across all cloth types
-const poseStates = reactive<PoseState[]>([
-  // FEMALE
-  ...['base', 'top', 'bottom'].flatMap(pt => [
-    { id: 'A', name: `여성 A (${pt})`, type: 'front' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'B', name: `여성 B (${pt})`, type: 'front' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'C', name: `여성 C (${pt})`, type: 'back' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'D', name: `여성 D (${pt})`, type: 'back' as const, gender: 'female', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-  ]),
-  // MALE
-  ...['base', 'top', 'bottom'].flatMap(pt => [
-    { id: 'A', name: `남성 A (${pt})`, type: 'front' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'B', name: `남성 B (${pt})`, type: 'front' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'C', name: `남성 C (${pt})`, type: 'back' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'D', name: `남성 D (${pt})`, type: 'back' as const, gender: 'male', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-  ]),
-  // MANNEQUIN
-  ...['base', 'top', 'bottom'].flatMap(pt => [
-    { id: 'A', name: `마네킹 A (${pt})`, type: 'front' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'B', name: `마네킹 B (${pt})`, type: 'front' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'C', name: `마네킹 C (${pt})`, type: 'back' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-    { id: 'D', name: `마네킹 D (${pt})`, type: 'back' as const, gender: 'mannequin', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: pt },
-  ]),
-  // CUSTOM
-  { id: 'E', name: '맞춤형', type: 'CUSTOM' as const, gender: 'custom', status: 'idle' as JobStatus, resultUrl: null, requestId: null, customPersonUrl: null, retryCount: 0, productType: 'base' },
-]);
+const poseStates = reactive<PoseState[]>([]);
 
 const topInput = ref<HTMLInputElement | null>(null);
 const bottomInput = ref<HTMLInputElement | null>(null);
 
 const uniquePoseTabs = computed(() => {
-  const ids = ['A', 'B', 'C', 'D', 'E'];
-  return ids.map(id => ({
+  const ids = Array.from(new Set(poseStates.map(p => p.id))).sort();
+  // Ensure 'E' is always at the end if it exists
+  const sortedIds = ids.filter(id => id !== 'E');
+  if (ids.includes('E')) sortedIds.push('E');
+  
+  return sortedIds.map(id => ({
     id,
     name: id === 'E' ? '맞춤형' : id
   }));
@@ -1255,11 +1296,16 @@ const historyList = computed(() => {
       personImageUrl: h.personImageUrl
     }));
 
-  // Add loading card if current viewing pose is generating
-  if (selectedPose.value && (selectedPose.value.status === 'pending' || selectedPose.value.status === 'processing')) {
+  // Add loading card if any pose with current viewing ID is generating
+  const generatingPoses = filteredPoses.value.filter(p => 
+    p.id === viewingPoseId.value && 
+    (p.status === 'pending' || p.status === 'processing')
+  );
+  
+  generatingPoses.forEach(p => {
     list.push({
       url: '',
-      status: selectedPose.value.status as JobStatus,
+      status: p.status as JobStatus,
       current: false,
       // Metadata placeholders for loader
       model: selectedModel.value,
@@ -1271,7 +1317,7 @@ const historyList = computed(() => {
       productImageUrl: '',
       personImageUrl: ''
     } as any);
-  }
+  });
 
   return list.map(item => {
     // If metadata is missing from the item itself (e.g. some legacy ones), try to find in cumulative history
@@ -1427,7 +1473,7 @@ const togglePoseSelection = (uniqueId: string) => {
 };
 
 const getSampleImageUrl = (poseId: string, poseProductType?: string) => {
-  const pose = filteredPoses.value.find(p => p.id === poseId && (!poseProductType || p.productType === poseProductType));
+  const pose = poseStates.find(p => p.id === poseId && p.gender === currentGender.value && (!poseProductType || p.productType === poseProductType));
   if (!pose) return '';
   const typeStr = pose.type === 'front' ? 'front' : 'rear';
   return `https://ai-fitting-studio-images.s3.ap-northeast-2.amazonaws.com/sample/${currentGender.value}-${pose.productType}-${typeStr}_${poseId.toLowerCase()}.jpg`;
@@ -1655,7 +1701,8 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchPoses();
   if (isDetailMode.value) {
     loadJobData();
   }
@@ -1820,6 +1867,7 @@ const executeJobRequest = async (pose: PoseState, fileToUse: File | null, keyToU
   formData.append('poseGroupId', poseGroupId.value);
   formData.append('slot', pose.id);
   formData.append('gender', currentGender.value);
+  formData.append('viewType', pose.type === 'front' ? 'FRONT' : 'BACK');
   
   let personKey = '';
   if (currentGender.value === 'custom') {
