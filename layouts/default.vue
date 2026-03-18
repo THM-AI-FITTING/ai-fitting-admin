@@ -26,6 +26,7 @@ const isMobileMenuOpen = ref(false); // 모바일 전용 수동 열림 상태
 const { theme, toggleTheme, updateBodyClass } = useTheme();
 const authCookie = useCookie('ai_admin_key', { path: '/' });
 const ownerCookie = useCookie('ai_admin_owner', { path: '/' });
+const userIdCookie = useCookie('ai_admin_user_id', { path: '/' });
 
 // 쿠키가 없을 경우 '관리자'를 기본값으로 사용
 const adminOwner = computed(() => ownerCookie.value || '관리자');
@@ -83,6 +84,7 @@ const handleLogout = async () => {
     console.log('[Logout] Clearing cookies');
     authCookie.value = null;
     ownerCookie.value = null;
+    userIdCookie.value = null;
     
     console.log('[Logout] Cookies after clearing:', {
       auth: authCookie.value ? 'exists' : 'null',

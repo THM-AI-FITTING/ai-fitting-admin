@@ -114,6 +114,9 @@ const handleLogin = async () => {
       const ownerCookie = useCookie('ai_admin_owner', { maxAge: 60 * 60 * 24 * 7, path: '/' });
       ownerCookie.value = response.userName || response.owner || '관리자';
       
+      const userIdCookie = useCookie('ai_admin_user_id', { maxAge: 60 * 60 * 24 * 7, path: '/' });
+      userIdCookie.value = response.userId || 'dev';
+      
       router.push('/');
     } else {
       error.value = response.message || '아이디 또는 비밀번호가 올바르지 않습니다.';
