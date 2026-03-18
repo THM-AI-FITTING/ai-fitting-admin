@@ -2516,7 +2516,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
 .generating-vibe {
   position: relative;
   border: 3px solid transparent !important;
-  background-image: linear-gradient(#fff, #fff), 
+  background-image: linear-gradient(var(--color-bg-surface), var(--color-bg-surface)), 
                     linear-gradient(90deg, #5c7cfa, #12b886, #ae3ec9, #5c7cfa);
   background-origin: border-box;
   background-clip: padding-box, border-box;
