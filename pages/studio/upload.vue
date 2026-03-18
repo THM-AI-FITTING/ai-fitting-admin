@@ -756,6 +756,7 @@ watch(isImageViewerOpen, async (val) => {
     actualImageMeta.width = 0;
     actualImageMeta.height = 0;
     actualImageMeta.sizeKb = 0;
+    clearHoveredPose();
   } else {
     // When opening, fetch actual image dimensions and size
     const targetUrl = viewingHistoryUrl.value || displayImageUrl.value;
