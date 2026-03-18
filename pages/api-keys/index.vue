@@ -2,19 +2,14 @@
   <div class="api-keys-page">
     <div class="page-controls animate-fade-in stagger-1">
       <div class="filters">
-        <BaseInput 
-          v-model="filters.owner" 
-          placeholder="파트너명 검색..." 
-          :icon="Search"
-          class="filter-input"
-        />
+        <BaseInput v-model="filters.owner" placeholder="파트너명 검색..." :icon="Search" class="filter-input" />
         <select v-model="filters.status" class="filter-select">
           <option value="">모든 상태</option>
           <option value="ACTIVE">활성 (ACTIVE)</option>
           <option value="INACTIVE">비활성 (INACTIVE)</option>
         </select>
       </div>
-      
+
       <BaseButton :icon="Plus" @click="showCreateModal = true">
         API 키 생성
       </BaseButton>
@@ -23,21 +18,12 @@
     <BaseCard class="animate-fade-in stagger-2">
       <!-- Desktop Table View -->
       <div class="hidden-mobile">
-        <BaseTable 
-          :columns="columns" 
-          :data="visibleKeys" 
-          :show-no="true"
-          :loading="pending"
-          @row-click="openEditModal"
-        >
+        <BaseTable :columns="columns" :data="visibleKeys" :show-no="true" :loading="pending" @row-click="openEditModal">
           <template #maskedKey="{ row }">
             <div class="key-cell">
               <div class="copy-container">
-                <span 
-                  class="key-text clickable" 
-                  title="클릭하여 복사"
-                  @click.stop="copyToClipboard(row.revealed ? row.apiKey : row.maskedKey, row.apiKey)"
-                >
+                <span class="key-text clickable" title="클릭하여 복사"
+                  @click.stop="copyToClipboard(row.revealed ? row.apiKey : row.maskedKey, row.apiKey)">
                   {{ row.revealed ? row.apiKey : row.maskedKey }}
                 </span>
                 <Transition name="fade-up">
@@ -45,22 +31,12 @@
                 </Transition>
               </div>
               <div class="key-actions-row">
-                <BaseButton 
-                  size="sm" 
-                  variant="ghost" 
-                  class="action-btn"
-                  title="복사"
-                  @click.stop="copyToClipboard(row.apiKey, row.apiKey)"
-                >
+                <BaseButton size="sm" variant="ghost" class="action-btn" title="복사"
+                  @click.stop="copyToClipboard(row.apiKey, row.apiKey)">
                   <Copy :size="16" />
                 </BaseButton>
-                <BaseButton 
-                  size="sm" 
-                  variant="ghost" 
-                  class="reveal-btn action-btn"
-                  title="보기/정체"
-                  @click.stop="toggleKeyReveal(row)"
-                >
+                <BaseButton size="sm" variant="ghost" class="reveal-btn action-btn" title="보기/정체"
+                  @click.stop="toggleKeyReveal(row)">
                   <Eye :size="16" v-if="!row.revealed" />
                   <EyeOff :size="16" v-else />
                 </BaseButton>
@@ -71,42 +47,28 @@
           <template #status="{ row }">
             <StatusBadge :status="row.status" />
           </template>
-          
+
           <template #createdAt="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
-          
+
           <template #expiredAt="{ row }">
             {{ row.expiredAt ? formatDate(row.expiredAt) : '무제한' }}
           </template>
-          
+
           <template #actions="{ row }">
             <div class="actions">
-              <BaseButton 
-                size="sm" 
-                variant="ghost" 
-                @click.stop="toggleStatus(row)"
-                :title="row.status === 'ACTIVE' ? '비활성화' : '활성화'"
-              >
-                <Power :size="16" :class="{ 'text-danger': row.status === 'ACTIVE', 'text-success': row.status === 'INACTIVE' }" />
+              <BaseButton size="sm" variant="ghost" @click.stop="toggleStatus(row)"
+                :title="row.status === 'ACTIVE' ? '비활성화' : '활성화'">
+                <Power :size="16"
+                  :class="{ 'text-danger': row.status === 'ACTIVE', 'text-success': row.status === 'INACTIVE' }" />
               </BaseButton>
-              
-              <BaseButton 
-                size="sm" 
-                variant="ghost" 
-                title="수정"
-                @click.stop="openEditModal(row)"
-              >
+
+              <BaseButton size="sm" variant="ghost" title="수정" @click.stop="openEditModal(row)">
                 <Edit :size="16" />
               </BaseButton>
 
-              <BaseButton 
-                size="sm" 
-                variant="ghost" 
-                class="text-danger"
-                @click.stop="deleteKey(row.apiKey)"
-                title="삭제"
-              >
+              <BaseButton size="sm" variant="ghost" class="text-danger" @click.stop="deleteKey(row.apiKey)" title="삭제">
                 <Trash2 :size="16" />
               </BaseButton>
             </div>
@@ -116,20 +78,12 @@
 
       <!-- Mobile Card List View -->
       <div class="mobile-only api-key-list-mobile">
-        <div 
-          v-for="row in visibleKeys" 
-          :key="row.apiKey"
-          class="mobile-key-card"
-          @click="openEditModal(row)"
-        >
+        <div v-for="row in visibleKeys" :key="row.apiKey" class="mobile-key-card" @click="openEditModal(row)">
           <div class="key-card-header">
             <div class="key-info">
               <div class="copy-container">
-                <span 
-                  class="key-text mono clickable" 
-                  :class="{ 'full-key': row.revealed }"
-                  @click.stop="copyToClipboard(row.revealed ? row.apiKey : row.maskedKey, row.apiKey)"
-                >
+                <span class="key-text mono clickable" :class="{ 'full-key': row.revealed }"
+                  @click.stop="copyToClipboard(row.revealed ? row.apiKey : row.maskedKey, row.apiKey)">
                   {{ row.revealed ? row.apiKey : formatKeyForMobile(row.maskedKey) }}
                 </span>
                 <Transition name="fade-up">
@@ -137,20 +91,12 @@
                 </Transition>
               </div>
               <div class="key-actions-row-mobile">
-                <BaseButton 
-                  size="sm" 
-                  variant="ghost" 
-                  class="action-btn-mobile"
-                  @click.stop="copyToClipboard(row.apiKey, row.apiKey)"
-                >
+                <BaseButton size="sm" variant="ghost" class="action-btn-mobile"
+                  @click.stop="copyToClipboard(row.apiKey, row.apiKey)">
                   <Copy :size="14" />
                 </BaseButton>
-                <BaseButton 
-                  size="sm" 
-                  variant="ghost" 
-                  class="reveal-btn-mobile action-btn-mobile"
-                  @click.stop="toggleKeyReveal(row)"
-                >
+                <BaseButton size="sm" variant="ghost" class="reveal-btn-mobile action-btn-mobile"
+                  @click.stop="toggleKeyReveal(row)">
                   <Eye :size="14" v-if="!row.revealed" />
                   <EyeOff :size="14" v-else />
                 </BaseButton>
@@ -158,11 +104,11 @@
             </div>
             <StatusBadge :status="row.status" size="sm" />
           </div>
-          
+
           <div class="key-card-body">
             <div class="info-row">
               <span class="info-label">파트너:</span>
-              <span class="info-value">{{ row.ownerName || row.owner }}</span>
+              <span class="info-value">{{ row.ownerName }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">시작일:</span>
@@ -175,32 +121,19 @@
           </div>
 
           <div class="key-card-actions" @click.stop>
-            <BaseButton 
-              size="sm" 
-              variant="ghost" 
-              @click.stop="toggleStatus(row)"
-              class="mobile-action-btn"
-            >
-              <Power :size="16" :class="{ 'text-danger': row.status === 'ACTIVE', 'text-success': row.status === 'INACTIVE' }" />
+            <BaseButton size="sm" variant="ghost" @click.stop="toggleStatus(row)" class="mobile-action-btn">
+              <Power :size="16"
+                :class="{ 'text-danger': row.status === 'ACTIVE', 'text-success': row.status === 'INACTIVE' }" />
               <span>{{ row.status === 'ACTIVE' ? '비활성' : '활성' }}</span>
             </BaseButton>
-            
-            <BaseButton 
-              size="sm" 
-              variant="ghost" 
-              @click.stop="openEditModal(row)"
-              class="mobile-action-btn"
-            >
+
+            <BaseButton size="sm" variant="ghost" @click.stop="openEditModal(row)" class="mobile-action-btn">
               <Edit :size="16" />
               <span>수정</span>
             </BaseButton>
 
-            <BaseButton 
-              size="sm" 
-              variant="ghost" 
-              class="text-danger mobile-action-btn"
-              @click.stop="deleteKey(row.apiKey)"
-            >
+            <BaseButton size="sm" variant="ghost" class="text-danger mobile-action-btn"
+              @click.stop="deleteKey(row.apiKey)">
               <Trash2 :size="16" />
               <span>삭제</span>
             </BaseButton>
@@ -214,16 +147,9 @@
     </BaseCard>
 
     <!-- Modals -->
-    <ApiKeyCreateModal 
-      v-model="showCreateModal" 
-      @created="refreshKeys" 
-    />
+    <ApiKeyCreateModal v-model="showCreateModal" @created="refreshKeys" />
 
-    <ApiKeyEditModal
-      v-model="showEditModal"
-      :item="editingKey"
-      @updated="refresh"
-    />
+    <ApiKeyEditModal v-model="showEditModal" :item="editingKey" @updated="refresh" />
   </div>
 </template>
 
@@ -255,7 +181,7 @@ const pageSize = ref(15);
 const config = useRuntimeConfig();
 const { data: rawKeys, pending, refresh } = await useFetch('/api/keys', {
   baseURL: config.public.apiBase,
-  query: { 
+  query: {
     q: searchQuery,
     page: page.value,
     limit: limit.value
@@ -317,7 +243,7 @@ const toggleStatus = async (row: any) => {
 
   await $fetch(`${config.public.apiBase}/api/keys/${row.apiKey}`, {
     method: 'PUT',
-    body: { 
+    body: {
       status: newStatus,
       owner: row.owner,
       createdAt: row.createdAt,
@@ -330,7 +256,7 @@ const toggleStatus = async (row: any) => {
 
 const deleteKey = async (apiKey: string) => {
   if (!confirm('정말로 이 API Key를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-  
+
   await $fetch(`${config.public.apiBase}/api/keys/${apiKey}`, {
     method: 'DELETE'
   });
@@ -423,17 +349,17 @@ const copyToClipboard = async (text: string, id: string) => {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filters {
     flex-direction: column;
     max-width: none;
   }
-  
+
   .filter-input {
     max-width: none;
     width: 100%;
   }
-  
+
   .filter-select {
     width: 100%;
   }
@@ -606,13 +532,16 @@ const copyToClipboard = async (text: string, id: string) => {
   border-top: 5px solid var(--color-primary);
 }
 
-.fade-up-enter-active, .fade-up-leave-active {
+.fade-up-enter-active,
+.fade-up-leave-active {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .fade-up-enter-from {
   opacity: 0;
   transform: translate(-50%, 10px);
 }
+
 .fade-up-leave-to {
   opacity: 0;
   transform: translate(-50%, -5px);
@@ -664,6 +593,11 @@ const copyToClipboard = async (text: string, id: string) => {
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.text-danger { color: var(--color-danger); }
-.text-success { color: var(--color-success); }
+.text-danger {
+  color: var(--color-danger);
+}
+
+.text-success {
+  color: var(--color-success);
+}
 </style>
