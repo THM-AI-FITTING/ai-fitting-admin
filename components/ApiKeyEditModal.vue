@@ -26,8 +26,8 @@
 
       <BaseInput 
         v-model="form.owner" 
-        label="파트너/소유자 명" 
-        placeholder="예: Partner A" 
+        label="회원 ID (owner)" 
+        placeholder="예: 사용자 고유 ID (userId)" 
         class="mb-4"
       />
 

@@ -162,7 +162,7 @@
           <div class="key-card-body">
             <div class="info-row">
               <span class="info-label">파트너:</span>
-              <span class="info-value">{{ row.owner }}</span>
+              <span class="info-value">{{ row.ownerName || row.owner }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">시작일:</span>
@@ -282,7 +282,7 @@ const filters = reactive({
 
 const columns = [
   { key: 'maskedKey', label: 'API Key' },
-  { key: 'owner', label: '파트너' },
+  { key: 'ownerName', label: '파트너' },
   { key: 'status', label: '상태' },
   { key: 'createdAt', label: '시작일' },
   { key: 'expiredAt', label: '만료일(종료일)' },
@@ -292,7 +292,7 @@ const columns = [
 const filteredKeys = computed(() => {
   if (!keys.value) return [];
   return keys.value.filter((k: any) => {
-    const matchOwner = !filters.owner || k.owner.toLowerCase().includes(filters.owner.toLowerCase());
+    const matchOwner = !filters.owner || (k.ownerName && k.ownerName.toLowerCase().includes(filters.owner.toLowerCase())) || (k.owner && k.owner.toLowerCase().includes(filters.owner.toLowerCase()));
     const matchStatus = !filters.status || k.status === filters.status;
     return matchOwner && matchStatus;
   });
