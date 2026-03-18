@@ -11,14 +11,29 @@
 
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
-          <label for="api-key">API KEY</label>
+          <label for="login-id">아이디</label>
           <div class="input-wrapper">
-            <Key :size="18" class="input-icon" />
+            <User :size="18" class="input-icon" />
             <input 
-              id="api-key"
-              v-model="apiKey" 
+              id="login-id"
+              v-model="loginId" 
+              type="text" 
+              placeholder="아이디를 입력하세요"
+              :disabled="loading"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <div class="input-wrapper">
+            <Lock :size="18" class="input-icon" />
+            <input 
+              id="password"
+              v-model="password" 
               type="password" 
-              placeholder="xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx"
+              placeholder="비밀번호를 입력하세요"
               :disabled="loading"
               required
             />
@@ -54,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { Sparkles, Key, AlertCircle, Sun, Moon } from 'lucide-vue-next';
+import { Sparkles, User, Lock, AlertCircle, Sun, Moon } from 'lucide-vue-next';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import { useTheme } from '~/composables/useTheme';
 
@@ -65,15 +80,16 @@ definePageMeta({
 
 const { theme, toggleTheme } = useTheme();
 
-const apiKey = ref('');
+const loginId = ref('');
+const password = ref('');
 const loading = ref(false);
 const error = ref('');
 const config = useRuntimeConfig();
 const router = useRouter();
 
 const handleLogin = async () => {
-  if (!apiKey.value.trim()) {
-    error.value = 'API 키를 입력해주세요.';
+  if (!loginId.value.trim() || !password.value.trim()) {
+    error.value = '아이디와 비밀번호를 모두 입력해주세요.';
     return;
   }
 
@@ -81,22 +97,26 @@ const handleLogin = async () => {
   error.value = '';
 
   try {
-    const response: any = await $fetch(`${config.public.apiBase}/api/keys/verify`, {
+    const response: any = await $fetch(`${config.public.apiBase}/api/auth/login`, {
       method: 'POST',
-      body: { apiKey: apiKey.value.trim() }
+      body: { 
+        loginId: loginId.value.trim(),
+        password: password.value.trim()
+      }
     });
 
     if (response.valid) {
       // 7일간 쿠키 유지
+      // 하위 호환성을 위해 받아온 apiKey를 기존 쿠키에 저장
       const authCookie = useCookie('ai_admin_key', { maxAge: 60 * 60 * 24 * 7, path: '/' });
-      authCookie.value = apiKey.value.trim();
+      authCookie.value = response.apiKey;
       
       const ownerCookie = useCookie('ai_admin_owner', { maxAge: 60 * 60 * 24 * 7, path: '/' });
-      ownerCookie.value = response.owner || '관리자';
+      ownerCookie.value = response.userName || response.owner || '관리자';
       
       router.push('/');
     } else {
-      error.value = response.message || '유효하지 않은 API 키입니다.';
+      error.value = response.message || '아이디 또는 비밀번호가 올바르지 않습니다.';
     }
   } catch (err) {
     console.error('Login error:', err);
