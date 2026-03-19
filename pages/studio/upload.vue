@@ -623,7 +623,8 @@ const route = useRoute();
 const config = useRuntimeConfig();
 const apiBase = config.public.apiBase;
 const ownerCookie = useCookie('ai_admin_owner');
-const currentUserId = computed(() => ownerCookie.value || 'dev');
+const userIdCookie = useCookie('ai_admin_user_id');
+const currentUserId = computed(() => userIdCookie.value || ownerCookie.value || 'dev');
 
 // --- State ---
 const currentGender = ref('female');
