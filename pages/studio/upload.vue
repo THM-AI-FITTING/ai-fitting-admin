@@ -75,6 +75,7 @@
               <div 
                 v-for="p in filteredPoses" 
                 :key="p.id + '-' + p.productType" 
+                :id="'pose-' + p.id + '-' + p.productType"
                 class="pose-card-v2"
                 :class="{ 
                   'active': selectedPoseIds.includes(p.id + '-' + p.productType),
@@ -89,7 +90,7 @@
                   <button 
                     class="model-change-btn" 
                     :disabled="allGenerating"
-                    @click.stop="modalActivePoseId = p.id; isCustomModelModalOpen = true"
+                    @click.stop="modalActivePoseId = p.id + '-' + p.productType; isCustomModelModalOpen = true"
                   >
                     <span>모델 변경</span>
                   </button>
@@ -622,8 +623,7 @@ const route = useRoute();
 const config = useRuntimeConfig();
 const apiBase = config.public.apiBase;
 const ownerCookie = useCookie('ai_admin_owner');
-const userIdCookie = useCookie('ai_admin_user_id');
-const currentUserId = computed(() => userIdCookie.value || ownerCookie.value || 'dev');
+const currentUserId = computed(() => ownerCookie.value || 'dev');
 
 // --- State ---
 const currentGender = ref('female');
@@ -756,7 +756,6 @@ watch(isImageViewerOpen, async (val) => {
     actualImageMeta.width = 0;
     actualImageMeta.height = 0;
     actualImageMeta.sizeKb = 0;
-    clearHoveredPose();
   } else {
     // When opening, fetch actual image dimensions and size
     const targetUrl = viewingHistoryUrl.value || displayImageUrl.value;
@@ -918,23 +917,34 @@ interface HistoryItem {
   prompt?: string;
   productImageUrl?: string;
   personImageUrl?: string;
+  productType: string; // Added productType
 }
 const cumulativeHistory = ref<HistoryItem[]>([]);
 
 const activePoseHistory = computed(() => {
   if (!modalActivePoseId.value) return [];
   
+  const [poseId, productType] = modalActivePoseId.value.split('-');
+  const currentPose = poseStates.find(p => p.id === poseId && p.productType === productType && p.gender === currentGender.value);
+
   const defaultModel = {
     name: '기본 모델',
-    url: getSampleImageUrl(modalActivePoseId.value, (filteredPoses.value.find(p => p.id === modalActivePoseId.value)?.productType || 'base')),
+    url: getSampleImageUrl(poseId, productType),
     isDefault: true,
     isNew: false
   };
 
+  if (!currentPose) return [defaultModel];
+
   const history = cumulativeHistory.value
-    .filter(h => h.poseId === modalActivePoseId.value && h.gender === currentGender.value)
+    .filter(h => 
+      h.poseId === poseId && 
+      h.productType === productType && 
+      h.gender === currentGender.value &&
+      currentPose.regeneratedUrls.includes(h.url) // Only show models added via 're-generate'
+    )
     .map((h, idx) => ({
-      name: `${h.gender === 'female' ? '여성' : h.gender === 'male' ? '남성' : '마네킹'} 생성 결과 ${idx + 1}`,
+      name: `${h.gender === 'female' ? '여성' : h.gender === 'male' ? '남성' : '마네킹'} 재생성 결과 ${idx + 1}`,
       url: h.url,
       isDefault: false,
       isNew: false
@@ -1193,7 +1203,8 @@ const fetchPoses = async () => {
             requestId: null,
             customPersonUrl: null,
             retryCount: 0,
-            productType: pt
+            productType: pt,
+            regeneratedUrls: [] // Added
           });
         }
       });
@@ -1202,7 +1213,8 @@ const fetchPoses = async () => {
       dynamicPoses.push({ 
         id: 'E', name: '맞춤형', type: 'CUSTOM' as const, gender: 'custom', 
         status: 'idle' as JobStatus, resultUrl: null, requestId: null, 
-        customPersonUrl: null, retryCount: 0, productType: 'base' 
+        customPersonUrl: null, retryCount: 0, productType: 'base',
+        regeneratedUrls: [] // Added
       });
 
       // Update poseStates
@@ -1253,6 +1265,7 @@ interface PoseState {
   customPersonUrl: string | null;
   retryCount: number;
   productType: string;
+  regeneratedUrls: string[]; // Added regeneratedUrls
 }
 
 // 4 Poses (A, B, C, D) for each gender across all cloth types
@@ -1293,6 +1306,7 @@ const historyList = computed(() => {
       sysRegDtm: h.sysRegDtm,
       gender: h.gender,
       poseId: h.poseId,
+      productType: h.productType, // Added
       prompt: h.prompt,
       productImageUrl: h.productImageUrl,
       personImageUrl: h.personImageUrl
@@ -1521,9 +1535,37 @@ const setAsBaseImage = async (item: any) => {
       currentGender.value = sourceGender;
     }
     
-    const pose = poseStates.find(p => p.id === sourcePoseId && p.gender === sourceGender);
+    const pose = poseStates.find(p => p.id === sourcePoseId && p.gender === sourceGender && p.productType === item.productType);
     if (pose) {
       pose.customPersonUrl = url;
+      // Also add to regeneratedUrls for selection modal
+      if (!pose.regeneratedUrls.includes(url)) {
+        pose.regeneratedUrls.push(url);
+      }
+
+      // Auto-select and Scroll
+      const uniqueId = pose.id + '-' + pose.productType;
+      if (!selectedPoseIds.value.includes(uniqueId)) {
+        selectedPoseIds.value.push(uniqueId);
+      }
+      viewingPoseId.value = pose.id;
+
+      nextTick(() => {
+        const grid = document.querySelector('.pose-grid-v2');
+        const el = document.getElementById(`pose-${uniqueId}`);
+        if (grid && el) {
+          const gridRect = grid.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const relativeTop = elRect.top - gridRect.top;
+          const targetScrollTop = grid.scrollTop + relativeTop - (gridRect.height / 2) + (elRect.height / 2);
+          
+          grid.scrollTo({
+            top: targetScrollTop,
+            behavior: 'smooth'
+          });
+        }
+      });
+
       showToast(`${sourceGender === 'female' ? '여성' : '남성'} ${pose.id} 포즈의 베이스 사진으로 설정되었습니다.`);
     }
   }
@@ -1550,7 +1592,9 @@ const downloadImage = async (url: string) => {
 };
 
 const selectCustomModel = (url: string) => {
-  const pose = poseStates.find(p => p.id === modalActivePoseId.value && p.gender === currentGender.value);
+  if (!modalActivePoseId.value) return;
+  const [poseId, productType] = modalActivePoseId.value.split('-');
+  const pose = poseStates.find(p => p.id === poseId && p.productType === productType && p.gender === currentGender.value);
   if (pose) {
     pose.customPersonUrl = url;
     isCustomModelModalOpen.value = false;
@@ -1645,7 +1689,8 @@ const loadJobData = async () => {
               requestId: null,
               customPersonUrl: null,
               retryCount: 0,
-              productType: job.productType || 'base'
+              productType: job.productType || 'base',
+              regeneratedUrls: [] // Added
             };
             poseStates.push(newPose);
             idx = poseStates.length - 1;
@@ -1676,7 +1721,8 @@ const loadJobData = async () => {
               sysRegDtm: job.sysRegDtm,
               prompt: job.prompt,
               productImageUrl: job.productImageUrl,
-              personImageUrl: job.personImageUrl
+              personImageUrl: job.personImageUrl,
+              productType: pose.productType // Added
             });
           }
         });
@@ -1793,7 +1839,8 @@ const fetchJobStatuses = async () => {
                   sysRegDtm: job.sysRegDtm,
                   prompt: job.prompt,
                   productImageUrl: job.productImageUrl,
-                  personImageUrl: job.personImageUrl
+                  personImageUrl: job.personImageUrl,
+                  productType: pose.productType // Added
                 });
               }
             }
@@ -2091,7 +2138,7 @@ onUnmounted(() => stopPolling());
   display: grid; 
   grid-template-columns: repeat(4, 1fr); 
   gap: 0.5rem; 
-  max-height: 480px; /* 리스트가 너무 짧아 겹치지 않도록 높이 상향 */
+  max-height: 200px; /* 리스트가 너무 짧아 겹치지 않도록 높이 상향 */
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -2517,7 +2564,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
 .generating-vibe {
   position: relative;
   border: 3px solid transparent !important;
-  background-image: linear-gradient(var(--color-bg-surface), var(--color-bg-surface)), 
+  background-image: linear-gradient(#fff, #fff), 
                     linear-gradient(90deg, #5c7cfa, #12b886, #ae3ec9, #5c7cfa);
   background-origin: border-box;
   background-clip: padding-box, border-box;
