@@ -2,7 +2,16 @@
   <div class="studio-redesign-container">
     
     <!-- Left Sidebar: Controls -->
-    <div class="studio-sidebar-v2">
+    <div class="studio-sidebar-v2" :class="{ 'is-collapsed': !isSidebarExpanded }">
+      <div class="sidebar-header-mobile" @click="isSidebarExpanded = !isSidebarExpanded">
+        <div class="header-main-info">
+          <Sparkles :size="16" class="text-indigo-400" />
+          <span class="header-title">제품 및 모델 설정</span>
+        </div>
+        <button class="header-toggle-btn mobile-only">
+          <ChevronDown :size="20" class="toggle-icon" :class="{ 'is-rotated': isSidebarExpanded }" />
+        </button>
+      </div>
       <div class="sidebar-content-v2">
         <!-- Clothing Upload Row (Top & Bottom) -->
         <section class="control-group">
@@ -305,6 +314,9 @@
                 @mousemove="onDragMove"
                 @mouseup="onDragEnd"
                 @mouseleave="onDragEnd"
+                @touchstart="onTouchStart"
+                @touchmove="onTouchMove"
+                @touchend="onTouchEnd"
               >
                 <div 
                   class="slider-track-v2" 
@@ -359,7 +371,7 @@
                 </button>
 
                 <!-- Slider Pagination -->
-                <div v-if="historyList.length > 1" class="slider-pagination-v2">
+                <div v-if="historyList.length > 0" class="slider-pagination-v2">
                   <span v-for="(_, idx) in historyList" :key="idx" 
                         class="pagination-dot" :class="{ active: idx === currentSlideIndex }"
                         @click="currentSlideIndex = idx"></span>
@@ -400,86 +412,93 @@
             </div>
             
             <!-- Side Panel Metadata -->
-            <div v-if="currentMetadata" class="viewer-side-panel">
+            <div v-if="currentMetadata" class="viewer-side-panel" :class="{ 'is-collapsed': isViewerPanelCollapsed }">
               <div class="side-panel-header">
-                <sparkles :size="16" class="text-indigo-400" />
-                <span>데이터 정보</span>
+                <div class="header-left">
+                  <sparkles :size="16" class="text-indigo-400" />
+                  <span>데이터 정보</span>
+                </div>
+                <button class="panel-toggle-btn mobile-only" @click="isViewerPanelCollapsed = !isViewerPanelCollapsed">
+                  <ChevronDown :size="18" class="toggle-icon" :class="{ 'is-rotated': isViewerPanelCollapsed }" />
+                </button>
               </div>
 
-              <!-- Source Previews -->
-              <div v-if="currentMetadata?.productImageUrl || currentMetadata?.personImageUrl" class="source-previews-section">
-                <div v-if="currentMetadata.productImageUrl" 
-                     class="source-preview-item"
-                     @mouseenter="setHoveredSource($event, currentMetadata.productImageUrl, '상품 이미지')"
-                     @mouseleave="clearHoveredPose">
-                  <img :src="currentMetadata.productImageUrl" />
-                  <span>상품</span>
-                </div>
-                <div v-if="currentMetadata.personImageUrl" 
-                     class="source-preview-item"
-                     @mouseenter="setHoveredSource($event, currentMetadata.personImageUrl, '인물 이미지')"
-                     @mouseleave="clearHoveredPose">
-                  <img :src="currentMetadata.personImageUrl" />
-                  <span>인물</span>
-                </div>
-              </div>
-              <div class="meta-section">
-                <div class="meta-row model-info">
-                  <span class="meta-label">생성 모델</span>
-                  <div class="meta-value-group">
-                    <span class="meta-value">{{ getModelLabel(currentMetadata.model) }}</span>
-                    <small class="model-id">{{ currentMetadata.model }}</small>
+              <div class="side-panel-scroll-content">
+                <!-- Source Previews -->
+                <div v-if="currentMetadata?.productImageUrl || currentMetadata?.personImageUrl" class="source-previews-section">
+                  <div v-if="currentMetadata.productImageUrl" 
+                       class="source-preview-item"
+                       @mouseenter="setHoveredSource($event, currentMetadata.productImageUrl, '상품 이미지')"
+                       @mouseleave="clearHoveredPose">
+                    <img :src="currentMetadata.productImageUrl" />
+                    <span>상품</span>
+                  </div>
+                  <div v-if="currentMetadata.personImageUrl" 
+                       class="source-preview-item"
+                       @mouseenter="setHoveredSource($event, currentMetadata.personImageUrl, '인물 이미지')"
+                       @mouseleave="clearHoveredPose">
+                    <img :src="currentMetadata.personImageUrl" />
+                    <span>인물</span>
                   </div>
                 </div>
-              </div>
-              
-              <div class="meta-section">
-                <div class="meta-grid">
-                  <div class="meta-item">
-                    <span class="meta-label">화면 비율</span>
-                    <span class="meta-value">{{ currentMetadata.aspectRatio || '-' }}</span>
+                <div class="meta-section">
+                  <div class="meta-row model-info">
+                    <span class="meta-label">생성 모델</span>
+                    <div class="meta-value-group">
+                      <span class="meta-value">{{ getModelLabel(currentMetadata.model) }}</span>
+                      <small class="model-id">{{ currentMetadata.model }}</small>
+                    </div>
                   </div>
-                  <div class="meta-item">
-                    <span class="meta-label">요청 해상도</span>
-                    <span class="meta-value">{{ currentMetadata.imageSize || '-' }}</span>
-                  </div>
-                  <div class="meta-item">
-                    <span class="meta-label">실제 해상도</span>
-                    <span class="meta-value">
-                      <template v-if="actualImageMeta.width > 0">
-                        {{ actualImageMeta.width }} x {{ actualImageMeta.height }}
-                      </template>
-                      <template v-else>
-                        계산 중...
-                      </template>
-                    </span>
-                  </div>
-                  <div class="meta-item">
-                    <span class="meta-label">파일 크기</span>
-                    <span class="meta-value">
-                      <template v-if="actualImageMeta.sizeKb > 0">
-                        {{ actualImageMeta.sizeKb >= 1024 ? (actualImageMeta.sizeKb / 1024).toFixed(2) + ' MB' : actualImageMeta.sizeKb + ' KB' }}
-                      </template>
-                      <template v-else-if="actualImageMeta.sizeKb === -1">
-                        알 수 없음
-                      </template>
-                      <template v-else>
-                        계산 중...
-                      </template>
-                    </span>
-                  </div>
-                  <div class="meta-item">
-                    <span class="meta-label">요청 사용자</span>
-                    <span class="meta-value">{{ currentMetadata.userId || '-' }}</span>
-                  </div>
-                  <div class="meta-item">
-                    <span class="meta-label">생성 일시</span>
-                    <span class="meta-value">{{ formatDate(currentMetadata.sysRegDtm || '') }}</span>
-                  </div>
-                  <div class="meta-item full-width mt-4">
-                    <span class="meta-label">입력 프롬프트</span>
-                    <div class="prompt-display">
-                      {{ currentMetadata.prompt || '입력된 프롬프트 없음' }}
+                </div>
+                
+                <div class="meta-section">
+                  <div class="meta-grid">
+                    <div class="meta-item">
+                      <span class="meta-label">화면 비율</span>
+                      <span class="meta-value">{{ currentMetadata.aspectRatio || '-' }}</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">요청 해상도</span>
+                      <span class="meta-value">{{ currentMetadata.imageSize || '-' }}</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">실제 해상도</span>
+                      <span class="meta-value">
+                        <template v-if="actualImageMeta.width > 0">
+                          {{ actualImageMeta.width }} x {{ actualImageMeta.height }}
+                        </template>
+                        <template v-else>
+                          계산 중...
+                        </template>
+                      </span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">파일 크기</span>
+                      <span class="meta-value">
+                        <template v-if="actualImageMeta.sizeKb > 0">
+                          {{ actualImageMeta.sizeKb >= 1024 ? (actualImageMeta.sizeKb / 1024).toFixed(2) + ' MB' : actualImageMeta.sizeKb + ' KB' }}
+                        </template>
+                        <template v-else-if="actualImageMeta.sizeKb === -1">
+                          알 수 없음
+                        </template>
+                        <template v-else>
+                          계산 중...
+                        </template>
+                      </span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">요청 사용자</span>
+                      <span class="meta-value">{{ currentMetadata.userId || '-' }}</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">생성 일시</span>
+                      <span class="meta-value">{{ formatDate(currentMetadata.sysRegDtm || '') }}</span>
+                    </div>
+                    <div class="meta-item full-width mt-4">
+                      <span class="meta-label">입력 프롬프트</span>
+                      <div class="prompt-display">
+                        {{ currentMetadata.prompt || '입력된 프롬프트 없음' }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -634,6 +653,9 @@ const selectedQuality = ref('1K');
 const selectedModel = ref('gemini-2.5-flash-image');
 const activePopover = ref<string | null>(null);
 const poseGroupId = ref(crypto.randomUUID());
+const isSidebarExpanded = ref(true);
+const isViewerPanelCollapsed = ref(false);
+const windowWidth = ref(1200); // Default for SSR
 
 // --- Click Outside Directive ---
 const vClickOutside = {
@@ -1133,11 +1155,30 @@ const onDragEnd = () => {
   dragOffset.value = 0;
 };
 
+const onTouchStart = (e: TouchEvent) => {
+  if (historyList.value.length <= 1) return;
+  isDragging.value = true;
+  startX.value = e.touches[0].pageX;
+  dragOffset.value = 0;
+  isTransitioning.value = false;
+};
+
+const onTouchMove = (e: TouchEvent) => {
+  if (!isDragging.value) return;
+  const currentX = e.touches[0].pageX;
+  dragOffset.value = currentX - startX.value;
+};
+
+const onTouchEnd = () => {
+  onDragEnd();
+};
+
 // --- Computed ---
 const sliderTransform = computed(() => {
-  const itemWidth = 50; // 70 -> 50
+  const isMobile = (windowWidth.value || 1200) <= 768;
+  const itemWidth = isMobile ? 85 : 50; 
   const gap = 2; 
-  const centerOffset = 25; // Adjusted for 50% width to keep active slide centered (100-50)/2
+  const centerOffset = (100 - itemWidth) / 2;
   
   const baseTranslate = -currentSlideIndex.value * (itemWidth + gap) + centerOffset;
   const dragTranslate = slideContentRef.value ? (dragOffset.value / slideContentRef.value.offsetWidth) * 100 : 0;
@@ -1774,6 +1815,9 @@ const handleKeydown = (e: KeyboardEvent) => {
 };
 
 onMounted(async () => {
+  windowWidth.value = window.innerWidth;
+  window.addEventListener('resize', () => { windowWidth.value = window.innerWidth; });
+  
   await fetchPoses();
   if (isDetailMode.value) {
     loadJobData();
@@ -1877,6 +1921,14 @@ const generateAllPoses = async () => {
   // We no longer regenerate it even if a new file is uploaded, to keep them in the same group.
   if (!isDetailMode.value && !poseGroupId.value) {
     poseGroupId.value = crypto.randomUUID();
+  }
+
+  // Scroll to main content if on mobile
+  if (window.innerWidth <= 768) {
+    const mainEl = document.querySelector('.studio-main-v2');
+    if (mainEl) {
+      mainEl.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
   for (let i = 0; i < selectedPoseIds.value.length; i++) {
@@ -3596,5 +3648,396 @@ body:not(.light-mode) .modern-textarea::placeholder {
 
 .mt-4 {
   margin-top: 1rem;
+}
+
+/* --- Mobile Sidebar Header --- */
+.sidebar-header-mobile {
+  display: none;
+  padding: 1rem 1.5rem;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.header-main-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  letter-spacing: -0.02em;
+}
+
+.header-toggle-btn {
+  background: var(--color-bg-alt);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none; /* 부모 클릭 이벤트 사용 */
+}
+
+.toggle-icon {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-icon.is-rotated {
+  transform: rotate(180deg);
+}
+
+/* --- Mobile Responsive Rules --- */
+@media (max-width: 768px) {
+  .studio-redesign-container {
+    flex-direction: column;
+    height: auto;
+    padding: 0;
+    gap: 0;
+    overflow-x: hidden;
+  }
+
+  .studio-sidebar-v2 {
+    width: calc(100% - 1.5rem);
+    margin: 0.75rem auto;
+    height: auto;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    position: sticky;
+    top: 0.75rem;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar-header-mobile {
+    display: flex;
+  }
+
+  .studio-sidebar-v2.is-collapsed .sidebar-content-v2,
+  .studio-sidebar-v2.is-collapsed .sidebar-footer-v2 {
+    display: none;
+  }
+
+  .sidebar-content-v2 {
+    padding: 1.25rem;
+    gap: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .upload-slots-row {
+    gap: 0.5rem;
+  }
+
+  .pose-grid-v2 {
+    grid-template-columns: repeat(3, 1fr);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .sidebar-footer-v2 {
+    padding: 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .popover-trigger-btn {
+    height: 48px;
+    padding: 0 12px;
+  }
+
+  .trigger-label {
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-align: left;
+    font-size: 0.75rem;
+  }
+
+  /* Popovers on Mobile */
+  .ratio-popover {
+    width: 90vw;
+    right: -20px;
+    left: auto;
+  }
+
+  .ratio-grid-v2 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .studio-main-v2 {
+    width: calc(100% - 1.5rem);
+    margin: 0 auto 1.5rem;
+    padding: 0;
+    height: auto;
+  }
+
+  .main-layout-v2 {
+    flex-direction: column;
+    height: auto;
+    gap: 1.25rem;
+  }
+
+  .preview-stage-v2 { 
+    height: auto;
+    min-height: 480px;
+  }
+
+  .preview-card-v2 {
+    height: auto;
+    min-height: 480px;
+  }
+
+  .slider-header-v2 {
+    padding: 0.75rem;
+  }
+
+  .view-tab {
+    height: 32px;
+    font-size: 0.75rem;
+    padding: 0 8px;
+  }
+
+  .result-image-wrapper {
+    padding: 0.25rem;
+    min-height: 480px; /* Keep minimum height to avoid jumping */
+  }
+
+  .slider-container-v2 {
+    height: auto;
+    min-height: 480px;
+    padding: 1rem 0;
+  }
+
+  .slider-track-v2 {
+    height: auto;
+  }
+
+  .slide-item-v2 {
+    flex: 0 0 85%;
+    width: 85%;
+    height: auto;
+    margin-right: 2%;
+  }
+
+  .img-inner-wrap {
+    height: auto;
+    width: 100%;
+  }
+
+  .img-relative-box {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2/3; 
+    max-width: none;
+    padding: 0 !important;
+    background: #fff; /* Match most image backgrounds */
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  }
+
+  .img-relative-box.is-loading-card {
+    aspect-ratio: 2/3;
+    height: auto;
+  }
+
+  .skeleton-result-v2 {
+    height: 100%;
+    width: 100%;
+    aspect-ratio: 2/3;
+  }
+
+  .result-img {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .result-hover-actions {
+    right: 5%;
+    top: 5%;
+  }
+
+  .hover-action-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Modals */
+  .custom-model-modal {
+    width: 92vw;
+    max-height: 85vh;
+  }
+
+  .modal-body-v2 {
+    padding: 1rem;
+  }
+
+  .model-grid-v2 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr); /* 2x3 for mobile */
+  }
+
+  .model-grid-container {
+    min-height: 320px;
+  }
+
+  /* Redesigned Image Viewer for Mobile */
+  .image-viewer-layout {
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .image-viewer-main {
+    flex: 1;
+    height: auto;
+    width: 100%;
+    padding: 1rem 1rem 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .viewer-img-container {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .viewer-img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+  }
+
+  .viewer-side-panel {
+    width: 100%;
+    height: 50vh;
+    background: rgba(10, 10, 15, 0.98);
+    backdrop-filter: blur(30px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px 24px 0 0;
+    padding: 1.25rem;
+    position: relative;
+    z-index: 100;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+  }
+
+  .viewer-side-panel.is-collapsed {
+    height: 60px;
+  }
+
+  .side-panel-header {
+    height: 24px;
+    margin-bottom: 0px !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-toggle-btn {
+    background: rgba(255,255,255,0.08);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .side-panel-scroll-content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 2rem;
+  }
+
+  .side-panel-scroll-content::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .side-panel-scroll-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  .meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .alert-content-modern {
+    width: 88vw;
+    padding: 1.5rem;
+  }
+
+  .pose-preview-tooltip {
+    display: none; /* 터치 환경에서는 툴팁 비활성화 권장 */
+  }
+
+  .slider-pagination-v2 {
+    bottom: 25px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 14px;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .pagination-dot {
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .pagination-dot.active {
+    background: #fff;
+    transform: scale(1.4);
+    box-shadow: 0 0 10px rgba(255,255,255,0.5);
+  }
+
+  .slider-nav-btn {
+    display: none; /* Hide nav arrows on mobile, use swipe/dots */
+  }
 }
 </style>
