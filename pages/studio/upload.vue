@@ -650,7 +650,7 @@ const currentGender = ref('female');
 const promptText = ref('');
 const selectedAspectRatio = ref('2:3');
 const selectedQuality = ref('1K');
-const selectedModel = ref('gemini-3.1-flash-image-preview');
+const selectedModel = ref('gemini-2.5-flash-image');
 const activePopover = ref<string | null>(null);
 const poseGroupId = ref(crypto.randomUUID());
 const isSidebarExpanded = ref(true);
@@ -1689,7 +1689,7 @@ const loadJobData = async () => {
         poseGroupId.value = groupId.value as any;
         const g = (first.gender || 'female').toLowerCase();
         currentGender.value = g === 'custom' ? 'custom' : g;
-        // selectedModel.value = first.model || 'gemini-3.1-flash-image-preview'; // 기본값을 나노 바나나2로 유지하기 위해 주석 처리
+        selectedModel.value = first.model || 'gemini-2.5-flash-image';
         promptText.value = first.prompt || '';
         metadata.userId = first.userId || '-';
         metadata.userName = first.userName || '';
@@ -3080,6 +3080,7 @@ body:not(.light-mode) .modern-textarea::placeholder {
   color: #fff;
   z-index: 101;
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  overflow-y: auto; /* 내용이 많을 경우 스크롤 가능하게 수정 */
 }
 
 .side-panel-header {
