@@ -79,10 +79,10 @@
             </button>
           </div>
 
-          <div class="pose-grid-v2">
+          <div class="pose-grid-v2" @scroll="handlePoseGridScroll">
             <template v-if="currentGender !== 'custom'">
               <div 
-                v-for="p in filteredPoses" 
+                v-for="p in paginatedPoses" 
                 :key="p.id + '-' + p.productType" 
                 :id="'pose-' + p.id + '-' + p.productType"
                 class="pose-card-v2"
@@ -650,12 +650,18 @@ const currentGender = ref('female');
 const promptText = ref('');
 const selectedAspectRatio = ref('2:3');
 const selectedQuality = ref('1K');
-const selectedModel = ref('gemini-2.5-flash-image');
+const selectedModel = ref('gemini-3.1-flash-image-preview');
 const activePopover = ref<string | null>(null);
 const poseGroupId = ref(crypto.randomUUID());
 const isSidebarExpanded = ref(true);
 const isViewerPanelCollapsed = ref(false);
 const windowWidth = ref(1200); // Default for SSR
+
+// --- Pose Pagination State ---
+const poseCurrentPage = ref(0);
+const posePageSize = 12;
+const hasMorePoses = ref(true);
+const isFetchingPoses = ref(false);
 
 // --- Click Outside Directive ---
 const vClickOutside = {
@@ -1213,11 +1219,24 @@ const genderTabs = [
 ];
 
 // --- Dynamic Poses Logic ---
-const fetchPoses = async () => {
+const fetchPoses = async (reset: boolean = true) => {
+  if (isFetchingPoses.value) return;
+  if (!reset && !hasMorePoses.value) return;
+
+  isFetchingPoses.value = true;
+  if (reset) {
+    poseCurrentPage.value = 0;
+    hasMorePoses.value = true;
+    poseStates.splice(0, poseStates.length);
+  }
+
   try {
-    const res = await fetch(`${apiBase}/api/studio/samples`);
+    const res = await fetch(`${apiBase}/api/studio/samples?gender=${currentGender.value}&page=${poseCurrentPage.value}&size=${posePageSize}`);
     if (res.ok) {
-      const keys: string[] = await res.json();
+      const data = await res.json();
+      const keys: string[] = data.keys || [];
+      const total = data.total || 0;
+      
       const dynamicPoses: PoseState[] = [];
       
       keys.forEach(key => {
@@ -1235,9 +1254,12 @@ const fetchPoses = async () => {
           const direction = suffixParts[0].toLowerCase(); // front or rear
           const poseId = suffixParts.length > 1 ? suffixParts[1].toUpperCase() : 'A';
           
+          const exists = poseStates.find(p => p.id === poseId && p.gender === gender && p.productType === pt);
+          if (exists) return;
+
           const genderName = gender === 'female' ? '여성' : gender === 'male' ? '남성' : '마네킹';
           
-          dynamicPoses.push({
+          const pose: PoseState = {
             id: poseId,
             name: `${genderName} ${poseId} (${pt})`,
             type: direction === 'front' ? 'front' : 'back',
@@ -1248,30 +1270,54 @@ const fetchPoses = async () => {
             customPersonUrl: null,
             retryCount: 0,
             productType: pt,
-            regeneratedUrls: [] // Added
+            regeneratedUrls: [] 
+          };
+
+          // Populate custom models from cumulativeHistory for this newly added pose
+          cumulativeHistory.value.forEach(h => {
+             if (h.poseId === poseId && h.gender === gender && h.productType === pt) {
+                if (h.personImageUrl && !h.personImageUrl.includes('/sample/')) {
+                   if (!pose.regeneratedUrls.includes(h.personImageUrl)) {
+                      pose.regeneratedUrls.push(h.personImageUrl);
+                   }
+                   pose.customPersonUrl = h.personImageUrl;
+                }
+             }
           });
+
+          dynamicPoses.push(pose);
         }
       });
 
-      // Add Custom item
-      dynamicPoses.push({ 
-        id: 'E', name: '맞춤형', type: 'CUSTOM' as const, gender: 'custom', 
-        status: 'idle' as JobStatus, resultUrl: null, requestId: null, 
-        customPersonUrl: null, retryCount: 0, productType: 'base',
-        regeneratedUrls: [] // Added
-      });
-
       // Update poseStates
-      poseStates.splice(0, poseStates.length, ...dynamicPoses);
+      poseStates.push(...dynamicPoses);
+
+      // Add Custom item only if gender is custom or manually added
+      if (currentGender.value === 'custom' && poseStates.length === 0) {
+        poseStates.push({ 
+          id: 'E', name: '맞춤형', type: 'CUSTOM' as const, gender: 'custom', 
+          status: 'idle' as JobStatus, resultUrl: null, requestId: null, 
+          customPersonUrl: null, retryCount: 0, productType: 'base',
+          regeneratedUrls: [] 
+        });
+      }
       
-      // Update viewingPoseId if current one is not in the new list
-      if (!dynamicPoses.some(p => p.id === viewingPoseId.value && p.gender === currentGender.value)) {
-          const firstAvailable = dynamicPoses.find(p => p.gender === currentGender.value);
-          if (firstAvailable) viewingPoseId.value = firstAvailable.id;
+      hasMorePoses.value = poseStates.length < total;
+      if (hasMorePoses.value) {
+        poseCurrentPage.value++;
+      }
+
+      // Update viewingPoseId if current one is not in the list and it's a reset
+      if (reset && dynamicPoses.length > 0) {
+          if (!dynamicPoses.some(p => p.id === viewingPoseId.value && p.gender === currentGender.value)) {
+              viewingPoseId.value = dynamicPoses[0].id;
+          }
       }
     }
   } catch (e) {
     console.error('[Studio] Failed to fetch dynamic poses:', e);
+  } finally {
+    isFetchingPoses.value = false;
   }
 };
 
@@ -1331,7 +1377,7 @@ const uniquePoseTabs = computed(() => {
 });
 
 // --- Computed ---
-const filteredPoses = computed(() => poseStates.filter(p => p.gender === currentGender.value));
+const filteredPoses = computed(() => poseStates);
 const selectedPose = computed(() => filteredPoses.value.find(p => p.id === viewingPoseId.value) || filteredPoses.value[0]);
 
 const historyList = computed(() => {
@@ -1435,6 +1481,20 @@ const displayImageUrl = computed(() => {
   return null;
 });
 
+const paginatedPoses = computed(() => {
+  return filteredPoses.value;
+});
+
+const handlePoseGridScroll = (e: Event) => {
+  const target = e.target as HTMLElement;
+  const { scrollTop, clientHeight, scrollHeight } = target;
+  if (scrollTop + clientHeight >= scrollHeight - 50) {
+    if (hasMorePoses.value) {
+      fetchPoses(false);
+    }
+  }
+};
+
 const allGenerating = computed(() => poseStates.some(p => p.status === 'pending' || p.status === 'processing'));
 
 const isReadyForPoseSelection = computed(() => !!topImage.value || !!bottomImage.value);
@@ -1459,6 +1519,7 @@ const hasHistoryOrIsDone = (poseId: string) => {
 watch(currentGender, (newGender) => {
   // const firstPose = filteredPoses.value[0];
   selectedPoseIds.value = [];
+  fetchPoses(true);
   
   // 맞춤형 모드일 경우 선택된 모델이 있으면 포즈 E 자동 선택
   if (newGender === 'custom' && selectedCustomModelId.value) {
@@ -1689,7 +1750,7 @@ const loadJobData = async () => {
         poseGroupId.value = groupId.value as any;
         const g = (first.gender || 'female').toLowerCase();
         currentGender.value = g === 'custom' ? 'custom' : g;
-        selectedModel.value = first.model || 'gemini-2.5-flash-image';
+        selectedModel.value = first.model || 'gemini-3.1-flash-image-preview';
         promptText.value = first.prompt || '';
         metadata.userId = first.userId || '-';
         metadata.userName = first.userName || '';
@@ -1754,6 +1815,14 @@ const loadJobData = async () => {
           }
           pose.resultUrl = job.resultUrl;
           pose.requestId = job.requestId;
+          
+          // Handle custom person image (regenerated/custom-model-run)
+          if (job.personImageUrl && !job.personImageUrl.includes('/sample/')) {
+            pose.customPersonUrl = job.personImageUrl;
+            if (!pose.regeneratedUrls.includes(job.personImageUrl)) {
+              pose.regeneratedUrls.push(job.personImageUrl);
+            }
+          }
           
           if (job.resultUrl && !cumulativeHistory.value.find(h => h.requestId === job.requestId)) {
             cumulativeHistory.value.push({
