@@ -96,6 +96,9 @@
               >
                 <div class="pose-thumb-v2">
                   <img :src="p.customPersonUrl || getSampleImageUrl(p.id, p.productType)" :alt="p.name" />
+                  <div v-if="selectedPoseIds.includes(p.id + '-' + p.productType)" class="pose-check-badge">
+                    <Check :size="12" />
+                  </div>
                   <button 
                     class="model-change-btn" 
                     :disabled="allGenerating"
@@ -133,6 +136,9 @@
                      @mouseenter="setHoveredCustom($event, m)"
                      @mouseleave="clearHoveredPose">
                   <img :src="m.url" class="custom-model-img" />
+                  <div v-if="selectedCustomModelId === m.id" class="pose-check-badge">
+                    <Check :size="12" />
+                  </div>
                   <button v-if="!allGenerating" class="remove-custom-btn" @click.stop="removeCustomModel(m.id)">
                     <X :size="12" />
                   </button>
@@ -2282,6 +2288,21 @@ onUnmounted(() => stopPolling());
   transition: all 0.3s ease;
 }
 .pose-thumb-v2 img { width: 100%; height: 100%; object-fit: cover; }
+.pose-check-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  background: #5c7cfa;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 
 .metadata-group {
   background: var(--color-bg-alt);
