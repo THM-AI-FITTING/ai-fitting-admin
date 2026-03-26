@@ -146,7 +146,7 @@
             </div>
             <div class="info-row">
               <User :size="12" class="info-icon" />
-              <span class="owner text-truncate">{{ job.owner }}</span>
+              <span class="owner text-truncate">{{ job.userName || job.userId || job.owner || 'Unknown' }}</span>
             </div>
             <div class="info-row">
               <Clock :size="12" class="info-icon" />

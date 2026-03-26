@@ -53,10 +53,10 @@
               {{ selectedGroups.length }}개 삭제
             </BaseButton>
           </Transition>
-          <BaseButton variant="ghost" @click="refresh()" title="새로고침">
+          <!-- <BaseButton variant="ghost" @click="refresh()" title="새로고침">
             <RefreshCw :size="18" :class="{ 'spin': pending }" />
-          </BaseButton>
-          <BaseButton variant="primary" @click="router.push('/studio/upload')">
+          </BaseButton> -->
+          <BaseButton variant="primary" style="width: 100%;" @click="router.push('/studio/upload')">
             <Sparkles :size="18" />
             새 작업
           </BaseButton>
@@ -98,6 +98,9 @@
         <template #status="{ row }">
           <StatusBadge :status="row.status" />
         </template>
+        <template #owner="{ row }">
+          <span class="owner-cell-text">{{ row.userName || row.userId || row.owner || '-' }}</span>
+        </template>
         <template #poses="{ row }">
           <div class="pose-badges">
              <span v-if="row.slots" class="mini-pose-badge">{{ row.slots.length }} Poses</span>
@@ -131,9 +134,24 @@
             </div>
           </div>
           <div class="item-info">
-            <div class="item-footer">
-              <span class="item-date">{{ formatDate(job.createdAt) }}</span>
-              <span class="item-poses">{{ job.slots?.length || 0 }} Poses</span>
+            <div class="requestId-row">
+              <div class="copy-container">
+                <span class="mono text-truncate clickable" @click.stop="copyToClipboard(job.poseGroupId)">{{ job.poseGroupId.split('-')[0] }}</span>
+                <Transition name="fade-up">
+                  <div v-if="activeTooltipId === job.poseGroupId" class="copy-tooltip">복사 완료!</div>
+                </Transition>
+              </div>
+              <button class="copy-btn" @click.stop="copyToClipboard(job.poseGroupId)" title="ID 복사">
+                <Copy :size="12" />
+              </button>
+            </div>
+            <div class="info-row">
+              <User :size="12" class="info-icon" />
+              <span class="owner text-truncate">{{ job.userName || job.userId || job.owner || 'Unknown' }}</span>
+            </div>
+            <div class="info-row">
+              <Clock :size="12" class="info-icon" />
+              <span class="date">{{ formatDate(job.createdAt) }}</span>
             </div>
           </div>
         </div>
@@ -160,7 +178,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { LayoutGrid, List as ListIcon, Sparkles, ImageIcon, Trash2, X } from 'lucide-vue-next';
+import { LayoutGrid, List as ListIcon, Sparkles, ImageIcon, Trash2, X, Copy, User, Clock } from 'lucide-vue-next';
 import BaseCard from '~/components/ui/BaseCard.vue';
 import BaseButton from '~/components/ui/BaseButton.vue';
 import BaseInput from '~/components/ui/BaseInput.vue';
@@ -193,8 +211,14 @@ const jobs = computed(() => {
   let list = [...rawJobs.value];
   
   // Apply Filters
-  if (filters.owner) list = list.filter(j => j.owner?.includes(filters.owner));
-  if (filters.userId) list = list.filter(j => j.userId?.includes(filters.userId));
+  if (filters.owner) {
+    const search = filters.owner.toLowerCase();
+    list = list.filter(j => 
+      (j.owner && j.owner.toLowerCase().includes(search)) || 
+      (j.userName && j.userName.toLowerCase().includes(search))
+    );
+  }
+  if (filters.userId) list = list.filter(j => j.userId?.toLowerCase().includes(filters.userId.toLowerCase()));
   if (filters.status) list = list.filter(j => j.status === filters.status);
   // Apply Sort
   return list.sort((a,b) => {
@@ -255,6 +279,7 @@ const copyToClipboard = async (text: string) => {
 
 const columns = [
   { key: 'poseGroupId', label: '그룹 ID' },
+  { key: 'owner', label: '사용자/파트너' },
   { key: 'prompt', label: '상품명/프롬프트' },
   { key: 'status', label: '상태' },
   { key: 'poses', label: '포즈' },
@@ -274,17 +299,17 @@ const goToDetail = (job: any) => {
 
 <style scoped>
 .studio-list-page { display: flex; flex-direction: column; gap: 1.5rem; }
-.filter-panel { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem; padding: 1.5rem; border-bottom: 1px solid var(--color-border); }
+.filter-panel { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem; padding: 1rem; border: 1px solid var(--color-border); }
 .filter-grid { display: flex; gap: 0.75rem; flex: 1; flex-wrap: wrap; }
-.filter-input-sm { width: 150px; }
-.filter-actions { display: flex; gap: 0.75rem; }
+.filter-input-sm { width: 200px; }
+.filter-actions { display: flex; align-items: center; gap: 0.75rem; }
 
 .card-header-actions { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 .view-toggles-integrated { display: flex; background: var(--color-bg-alt); padding: 3px; border-radius: 8px; border: 1px solid var(--color-border); gap: 2px; }
 .toggle-btn-modern { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; color: var(--color-text-muted); border-radius: 6px; cursor: pointer; transition: all 0.2s; }
 .toggle-btn-modern.active { background: var(--color-primary); color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); }
 
-.studio-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.5rem; padding: 1.5rem; }
+.studio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; padding: 1.5rem; }
 .studio-item-card { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: var(--color-bg-surface); }
 .studio-item-card:hover { transform: translateY(-4px); border-color: var(--color-primary); box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2); }
 .studio-item-card.selected { border-color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.05); }
@@ -295,12 +320,25 @@ const goToDetail = (job: any) => {
 .item-status { position: absolute; bottom: 8px; right: 8px; }
 .thumb-checkbox { position: absolute; top: 8px; right: 8px; border-radius: 4px; padding: 2px; }
 
-.item-info { padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
-.item-name { font-weight: 600; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.item-footer { display: flex; justify-content: space-between; font-size: 0.75rem; color: #888; margin-top: 4px; }
-
-.id-cell { display: flex; align-items: center; gap: 0.5rem; }
-.id-text { color: var(--color-primary); font-weight: 700; cursor: pointer; }
+.item-info { padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; background: var(--color-bg-surface); }
+.requestId-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.2rem; }
+.text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copy-btn { padding: 4px; border-radius: 4px; color: var(--color-text-muted); transition: all 0.2s; display: flex; align-items: center; justify-content: center; border: none; background: transparent; cursor: pointer; }
+.copy-btn:hover { background: rgba(var(--color-primary-rgb), 0.1); color: var(--color-primary); }
+.info-row { display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-muted); font-size: 0.8rem; }
+.info-icon { opacity: 0.6; flex-shrink: 0; }
+.copy-container { position: relative; display: flex; align-items: center; min-width: 0; flex: 1; }
+.copy-tooltip { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--color-primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3); z-index: 100; }
+.copy-tooltip::after { content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid var(--color-primary); }
+.fade-up-enter-active, .fade-up-leave-active { transition: all 0.2s ease-out; }
+.fade-up-enter-from { opacity: 0; transform: translate(-50%, 5px); }
+.fade-up-leave-to { opacity: 0; transform: translate(-50%, -3px); }
+.mono { color: var(--color-primary); font-weight: 700; font-size: 0.85rem; letter-spacing: -0.02em; transition: all 0.2s; }
+.mono.clickable { cursor: pointer; }
+.mono.clickable:hover { text-decoration: underline; color: var(--color-primary-light, #818cf8); }
+.owner { font-weight: 500; color: var(--color-text-main); }
+.owner-cell-text { font-size: 0.85rem; color: var(--color-text-main); opacity: 0.9; }
+.date { font-size: 0.75rem; opacity: 0.8; }
 .preview-btn { padding: 0; width: 28px; height: 28px; color: var(--color-primary); }
 
 .load-more { display: flex; justify-content: center; padding: 1.5rem; border-top: 1px solid #f0f0f0; }
@@ -316,5 +354,79 @@ const goToDetail = (job: any) => {
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .studio-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .page-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .filter-panel {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  
+  .filter-input-sm {
+    width: 100% !important;
+  }
+  
+  .filter-select {
+    width: 100% !important;
+  }
+
+  .view-toggles-integrated {
+    display: none !important;
+  }
+  
+  .filter-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .filter-actions :deep(.base-button),
+  .filter-actions .base-button {
+    width: 100%;
+    justify-content: center;
+    height: 44px;
+    margin-right: 0;
+  }
+
+  .delete-btn {
+    width: 100%;
+    justify-content: center;
+    height: 44px;
+    margin-right: 0;
+  }
+
+  .item-info {
+    padding: 0.75rem;
+    gap: 0.35rem;
+  }
+  
+  .item-date, .item-poses {
+    font-size: 0.7rem;
+  }
+
+  .id-text {
+    font-size: 0.75rem;
+  }
 }
 </style>

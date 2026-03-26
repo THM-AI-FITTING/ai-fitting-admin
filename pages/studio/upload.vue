@@ -164,8 +164,8 @@
         <section v-if="isDetailMode" class="control-group metadata-group">
           <div class="metadata-grid">
             <div class="meta-item">
-              <span class="meta-label">사용자 ID</span>
-              <span class="meta-value">{{ metadata.userId }}</span>
+              <span class="meta-label">요청 사용자</span>
+              <span class="meta-value">{{ metadata.userName || metadata.userId || '-' }}</span>
             </div>
             <div class="meta-item">
               <span class="meta-label">생성일</span>
@@ -488,7 +488,7 @@
                     </div>
                     <div class="meta-item">
                       <span class="meta-label">요청 사용자</span>
-                      <span class="meta-value">{{ currentMetadata.userId || '-' }}</span>
+                      <span class="meta-value">{{ currentMetadata.userName || currentMetadata.userId || '-' }}</span>
                     </div>
                     <div class="meta-item">
                       <span class="meta-label">생성 일시</span>
@@ -650,7 +650,7 @@ const currentGender = ref('female');
 const promptText = ref('');
 const selectedAspectRatio = ref('2:3');
 const selectedQuality = ref('1K');
-const selectedModel = ref('gemini-2.5-flash-image');
+const selectedModel = ref('gemini-3.1-flash-image-preview');
 const activePopover = ref<string | null>(null);
 const poseGroupId = ref(crypto.randomUUID());
 const isSidebarExpanded = ref(true);
@@ -734,6 +734,7 @@ const isDetailMode = computed(() => !!groupId.value);
 const isLoadingData = ref(false);
 const metadata = reactive({
   userId: '-',
+  userName: '',
   regDtm: '-',
   status: 'IDLE'
 });
@@ -936,6 +937,7 @@ interface HistoryItem {
   aspectRatio?: string;
   imageSize?: string;
   userId?: string;
+  userName?: string;
   sysRegDtm?: string;
   prompt?: string;
   productImageUrl?: string;
@@ -1345,6 +1347,7 @@ const historyList = computed(() => {
       aspectRatio: h.aspectRatio,
       imageSize: h.imageSize,
       userId: h.userId,
+      userName: h.userName,
       sysRegDtm: h.sysRegDtm,
       gender: h.gender,
       poseId: h.poseId,
@@ -1386,6 +1389,7 @@ const historyList = computed(() => {
       aspectRatio: item.aspectRatio || meta?.aspectRatio || '-',
       imageSize: item.imageSize || meta?.imageSize || '-',
       userId: item.userId || meta?.userId || '-',
+      userName: item.userName || meta?.userName || '',
       sysRegDtm: item.sysRegDtm || meta?.sysRegDtm || '-',
       prompt: item.prompt || meta?.prompt || '',
       productImageUrl: item.productImageUrl || meta?.productImageUrl || '',
@@ -1685,9 +1689,10 @@ const loadJobData = async () => {
         poseGroupId.value = groupId.value as any;
         const g = (first.gender || 'female').toLowerCase();
         currentGender.value = g === 'custom' ? 'custom' : g;
-        selectedModel.value = first.model || 'gemini-2.5-flash-image';
+        // selectedModel.value = first.model || 'gemini-3.1-flash-image-preview'; // 기본값을 나노 바나나2로 유지하기 위해 주석 처리
         promptText.value = first.prompt || '';
         metadata.userId = first.userId || '-';
+        metadata.userName = first.userName || '';
         metadata.regDtm = first.sysRegDtm || '-';
         
         // Clear history before repopulating in detail mode to avoid duplicates if needed
@@ -1760,6 +1765,7 @@ const loadJobData = async () => {
               aspectRatio: job.aspectRatio,
               imageSize: job.imageSize || job.resolution,
               userId: job.userId,
+              userName: job.userName,
               sysRegDtm: job.sysRegDtm,
               prompt: job.prompt,
               productImageUrl: job.productImageUrl,
@@ -1881,6 +1887,7 @@ const fetchJobStatuses = async () => {
                   aspectRatio: job.aspectRatio,
                   imageSize: job.imageSize || job.resolution,
                   userId: job.userId,
+                  userName: job.userName,
                   sysRegDtm: job.sysRegDtm,
                   prompt: job.prompt,
                   productImageUrl: job.productImageUrl,
