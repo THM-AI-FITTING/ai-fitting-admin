@@ -80,7 +80,7 @@
           </div>
 
           <div class="pose-grid-v2" @scroll="handlePoseGridScroll">
-            <template v-if="currentGender !== 'custom'">
+            <template v-if="currentGender !== 'custom' && currentGender !== 'muse'">
               <div 
                 v-for="p in paginatedPoses" 
                 :key="p.id + '-' + p.productType" 
@@ -113,8 +113,30 @@
               </div>
             </template>
 
+            <!-- Virtual Muse Selection UI -->
+            <template v-else-if="currentGender === 'muse'">
+              <div v-if="brandMuses.length === 0" class="custom-upload-full" @click="router.push('/muse/create')">
+                <div class="upload-icon-circle"><Sparkles :size="32" /></div>
+                <p class="upload-msg">생성된 가상 뮤즈가 없습니다.</p>
+                <p class="upload-sub">뮤즈 스튜디오에서 먼저 뮤즈를 만들어보세요.</p>
+              </div>
+              <template v-else>
+                <div v-for="m in brandMuses" :key="m.muse_id" 
+                     class="custom-model-card"
+                     :class="{ 'active': selectedMuseId === m.muse_id, 'generating': allGenerating }"
+                     @click="!allGenerating ? selectedMuseId = m.muse_id : null"
+                     @mouseenter="setHoveredMuse($event, m)"
+                     @mouseleave="clearHoveredPose">
+                  <img :src="m.image_url" class="custom-model-img" />
+                  <div v-if="selectedMuseId === m.muse_id" class="pose-check-badge">
+                    <Check :size="12" />
+                  </div>
+                </div>
+              </template>
+            </template>
+
             <!-- Custom Model Upload UI -->
-            <template v-else>
+            <template v-else-if="currentGender === 'custom'">
               <div v-if="customModels.length === 0" 
                    class="custom-upload-full"
                    :class="{ 'dragging': modalIsDragging }"
@@ -657,6 +679,10 @@ const promptText = ref('');
 const selectedAspectRatio = ref('2:3');
 const selectedQuality = ref('1K');
 const selectedModel = ref('gemini-3.1-flash-image-preview');
+
+const brandMuses = ref<any[]>([]);
+const selectedMuseId = ref<string | null>(null);
+
 const activePopover = ref<string | null>(null);
 const poseGroupId = ref(crypto.randomUUID());
 const isSidebarExpanded = ref(true);
@@ -1055,6 +1081,26 @@ const setHoveredCustom = (event: MouseEvent, model: { id: string, url: string, f
   };
 };
 
+const setHoveredMuse = (event: MouseEvent, muse: any) => {
+  if (allGenerating.value) return;
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const tooltipHeight = 460;
+  const viewportHeight = window.innerHeight;
+  let topPos = rect.top;
+  if (topPos + tooltipHeight > viewportHeight - 20) topPos = viewportHeight - tooltipHeight - 20;
+  if (topPos < 20) topPos = 20;
+
+  hoverTooltipStyle.top = `${topPos}px`;
+  hoverTooltipStyle.left = `${rect.right + 20}px`;
+  
+  hoveredPoseData.value = {
+    id: 'Muse',
+    name: muse.name,
+    type: 'CUSTOM',
+    url: muse.image_url
+  };
+};
+
 const setHoveredSource = (event: MouseEvent, url: string, name: string) => {
   if (allGenerating.value) return;
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -1221,6 +1267,7 @@ const prevSlide = () => {
 const genderTabs = [
   { id: 'female', name: '여성' },
   { id: 'male', name: '남성' },
+  { id: 'muse', name: '가상 뮤즈 ✨' },
   { id: 'custom', name: '맞춤형' }
 ];
 
@@ -1324,6 +1371,20 @@ const fetchPoses = async (reset: boolean = true) => {
     console.error('[Studio] Failed to fetch dynamic poses:', e);
   } finally {
     isFetchingPoses.value = false;
+  }
+};
+
+const fetchBrandMuses = async () => {
+  try {
+    const res = await fetch(`${apiBase}/api/muse/muses?brandId=${currentUserId.value}`);
+    if (res.ok) {
+      brandMuses.value = await res.json();
+      if (brandMuses.value.length > 0 && !selectedMuseId.value) {
+        selectedMuseId.value = brandMuses.value[0].muse_id;
+      }
+    }
+  } catch (e) {
+    console.error('[Studio] Failed to fetch brand muses:', e);
   }
 };
 
@@ -1509,6 +1570,9 @@ const isPoseClickable = (poseType: 'front' | 'back' | 'CUSTOM') => {
   if (currentGender.value === 'custom') {
     return (!!topImage.value || !!bottomImage.value) && !!selectedCustomModelId.value;
   }
+  if (currentGender.value === 'muse') {
+    return (!!topImage.value || !!bottomImage.value) && !!selectedMuseId.value;
+  }
   if (poseType === 'front') return !!topImage.value;
   if (poseType === 'back') return !!bottomImage.value;
   return false;
@@ -1532,8 +1596,28 @@ watch(currentGender, (newGender) => {
     selectedPoseIds.value = ['E-base'];
   }
   
+  // 가상 뮤즈 모드일 경우 선택된 뮤즈가 있으면 포즈 E 자동 선택
+  if (newGender === 'muse') {
+    fetchBrandMuses();
+    if (selectedMuseId.value) {
+      selectedPoseIds.value = ['E-base'];
+    }
+  }
+  
   // viewingPoseId.value = firstPose.id; // Keep viewingPoseId to prevent jumping
   viewingHistoryUrl.value = null;
+});
+
+watch(selectedMuseId, (newId) => {
+  if (currentGender.value === 'muse') {
+    if (newId) {
+      if (!selectedPoseIds.value.includes('E-base')) {
+        selectedPoseIds.value = ['E-base'];
+      }
+    } else {
+      selectedPoseIds.value = selectedPoseIds.value.filter(id => id !== 'E-base');
+    }
+  }
 });
 
 watch(selectedCustomModelId, (newId) => {
@@ -2086,6 +2170,12 @@ const executeJobRequest = async (pose: PoseState, fileToUse: File | null, keyToU
       } else if (m.s3Key) {
         personKey = m.s3Key;
       }
+    }
+  } else if (currentGender.value === 'muse') {
+    formData.set('gender', 'MUSE');
+    const m = brandMuses.value.find(m => m.muse_id === selectedMuseId.value);
+    if (m) {
+      personKey = extractS3Key(m.image_url) || m.image_url;
     }
   } else {
     personKey = extractS3Key(pose.customPersonUrl) || `sample/${currentGender.value}-${pose.productType}-${pose.type === 'front' ? 'front' : 'rear'}_${pose.id.toLowerCase()}.jpg`;

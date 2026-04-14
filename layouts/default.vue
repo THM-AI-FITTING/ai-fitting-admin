@@ -44,10 +44,17 @@ const closeMobileMenu = () => {
   isMobileMenuOpen.value = false;
 };
 
-// 라우트 변경 시 모바일 메뉴 닫기
-watch(() => route.path, () => {
+// 라우트 변경 시 모바일 메뉴 닫기 및 특정 페이지 사이드바 자동 접기
+watch(() => route.path, (path) => {
   closeMobileMenu();
-});
+  
+  // AI 스튜디오 생성 및 가상 뮤즈 생성 페이지에서는 사이드바를 자동으로 닫고, 그 외 메뉴는 활성화
+  if (path === '/studio/upload' || path === '/muse/create') {
+    isSidebarOpen.value = false;
+  } else {
+    isSidebarOpen.value = true;
+  }
+}, { immediate: true });
 
 const menuGroups = computed(() => [
   {
@@ -67,6 +74,12 @@ const menuGroups = computed(() => [
     title: 'AI 스튜디오',
     items: [
       { name: 'AI 스튜디오', href: '/studio', icon: Layers, active: route.path.startsWith('/studio') },
+    ]
+  },
+  {
+    title: '브랜드 가상 모델',
+    items: [
+      { name: '가상 뮤즈 관리', href: '/muse', icon: Sparkles, active: route.path.startsWith('/muse') }
     ]
   }
 ]);
